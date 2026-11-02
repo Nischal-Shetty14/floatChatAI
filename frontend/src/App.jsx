@@ -14,6 +14,10 @@ import IncidentCommand from './components/IncidentCommand';
 import DataUploader from './components/DataUploader';
 import About from './components/About';
 import FloatChatBot from './components/FloatChatBot';
+import AuthScreen from './components/AuthScreen';
+import AdminPortal from './components/AdminPortal';
+import { clearSession } from './utils/authClient';
+import { tabsForRole } from './utils/roles';
 import { MessageSquare, RefreshCw, Radio, AlertTriangle } from 'lucide-react';
 import './App.css';
 
@@ -322,6 +326,8 @@ function App() {
   const [activeSOSList, setActiveSOSList] = useState(DEFAULT_SOS_LIST);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [userLocation, setUserLocation] = useState({ lat: 13.052, lng: 80.235, name: 'Marina Coastal Strip (+4m)' });
+  const [session, setSession] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
 
   // Fetch Telemetry Data
   const fetchTelemetry = useCallback(async () => {
@@ -394,6 +400,55 @@ function App() {
     }, 10000);
     return () => clearInterval(interval);
   }, [fetchTelemetry, fetchDisasterData, fetchStatus]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const raw = localStorage.getItem('floatchat_session');
+    if (!raw) {
+      setAuthReady(true);
+      return undefined;
+    }
+    let saved;
+    try {
+      saved = JSON.parse(raw);
+    } catch {
+      clearSession();
+      setAuthReady(true);
+      return undefined;
+    }
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${saved.token}` } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('expired');
+        return response.json();
+      })
+      .then((data) => {
+        if (!cancelled) setSession({ token: saved.token, user: data.user });
+      })
+      .catch(() => {
+        clearSession();
+        if (!cancelled) setSession(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAuthReady(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const role = session?.user?.role || 'user';
+  const allowedTabs = useMemo(() => tabsForRole(role), [role]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (!allowedTabs.includes(activeTab)) setActiveTab('disaster-alerts');
+  }, [session, activeTab, allowedTabs]);
+
+  const handleLogout = () => {
+    clearSession();
+    setSession(null);
+    setActiveTab('disaster-alerts');
+  };
 
   // Switch Disaster Scenario Handler
   const handleSwitchScenario = async (key) => {
@@ -537,6 +592,18 @@ function App() {
     return (activeSOSList || []).filter(s => s.status !== 'RESCUED').length;
   }, [activeSOSList]);
 
+  if (!authReady) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: 'var(--text-secondary)' }}>
+        Opening FloatChat...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen onAuthenticated={setSession} />;
+  }
+
   return (
     <div className="app-container">
       
@@ -551,6 +618,9 @@ function App() {
         isMongoConnected={isMongoConnected}
         alertCount={alertCount}
         activeSOSCount={activeSOSCount}
+        allowedTabs={allowedTabs}
+        currentUser={session.user}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area */}
@@ -602,6 +672,7 @@ function App() {
               warehouses={warehouses}
               onNavigateToShelter={handleNavigateToShelter}
               onFamilyCheckIn={handleFamilyCheckIn}
+              allowDispatch={role !== 'user'}
             />
           )}
 
@@ -667,6 +738,10 @@ function App() {
             />
           )}
           
+          {activeTab === 'admin-portal' && role === 'admin' && (
+            <AdminPortal />
+          )}
+
           {activeTab === 'about' && (
             <About />
           )}

@@ -10,6 +10,7 @@ export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [geminiReady, setGeminiReady] = useState(null);
   const chatEndRef = useRef(null);
 
   const SUGGESTIONS = [
@@ -20,6 +21,16 @@ export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
     "Show AI resource distribution recommendations for relief warehouses.",
     "Are there any low oxygen or buoy pressure spikes?"
   ];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch('/api/status')
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (data) setGeminiReady(Boolean(data.geminiConfigured));
+      })
+      .catch(() => setGeminiReady(false));
+  }, [isOpen]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -156,6 +167,11 @@ export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
           <MessageSquare size={20} color="var(--color-primary)" />
           <span className="gradient-text">FloatChat Analyst</span>
         </div>
+        {geminiReady === false && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            Practice replies until a Gemini key is pasted into backend/secrets/gemini-api-key.txt
+          </div>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button 
             className="btn-secondary" 
