@@ -9,7 +9,8 @@ export default function ShelterResourceManager({
   shelters, 
   warehouses, 
   onNavigateToShelter, 
-  onFamilyCheckIn 
+  onFamilyCheckIn,
+  allowDispatch = true
 }) {
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [selectedShelterId, setSelectedShelterId] = useState(shelters?.[0]?.id || 'SHELTER-01');
@@ -247,16 +248,21 @@ export default function ShelterResourceManager({
                   🛣️ <strong>Safe Corridor:</strong> {rec.safeCorridor} (Avoids {rec.avoidRoads.join(', ')})
                 </div>
 
-                {/* Dispatch Button */}
-                <button
-                  className="btn-primary"
-                  style={{ marginTop: 'auto', justifyContent: 'center', fontSize: '12px', padding: '8px' }}
-                  onClick={() => handleDispatchConvoy(rec.id)}
-                  disabled={isDispatching}
-                >
-                  <Truck size={14} />
-                  <span>Approve & Dispatch Relief Convoy ({rec.estimatedTravelTimeMins}m ETA)</span>
-                </button>
+                {allowDispatch ? (
+                  <button
+                    className="btn-primary"
+                    style={{ marginTop: 'auto', justifyContent: 'center', fontSize: '12px', padding: '8px' }}
+                    onClick={() => handleDispatchConvoy(rec.id)}
+                    disabled={isDispatching}
+                  >
+                    <Truck size={14} />
+                    <span>Approve & Dispatch Relief Convoy ({rec.estimatedTravelTimeMins}m ETA)</span>
+                  </button>
+                ) : (
+                  <div style={{ marginTop: 'auto', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Relief convoys are approved by the warehouse manager or the admin.
+                  </div>
+                )}
               </div>
             ))
           ) : (

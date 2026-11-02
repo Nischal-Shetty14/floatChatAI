@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Send, PhoneCall, Settings, CheckCircle2, AlertTriangle, ShieldAlert, History, Key, Check } from 'lucide-react';
+import { authHeaders } from '../utils/authClient';
 
 function SMSAlertCenter() {
   const [config, setConfig] = useState({
@@ -26,7 +27,7 @@ function SMSAlertCenter() {
   // Fetch Twilio config status
   const fetchConfig = async () => {
     try {
-      const res = await fetch('/api/sms/config');
+      const res = await fetch('/api/sms/config', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setConfigStatus(data);
@@ -42,7 +43,7 @@ function SMSAlertCenter() {
   // Fetch SMS audit logs
   const fetchLogs = async () => {
     try {
-      const res = await fetch('/api/sms/logs');
+      const res = await fetch('/api/sms/logs', { headers: authHeaders() });
       if (res.ok) {
         const data = await res.json();
         setSmsLogs(data.logs || []);
@@ -64,7 +65,7 @@ function SMSAlertCenter() {
     try {
       const res = await fetch('/api/sms/config', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(config)
       });
       const data = await res.json();
@@ -90,12 +91,13 @@ function SMSAlertCenter() {
     try {
       const res = await fetch('/api/sms/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           to: testRecipient || undefined,
           message: testMessage,
           buoyName: selectedBuoy,
-          severity: selectedSeverity
+          severity: selectedSeverity,
+          liveOnly: true
         })
       });
 
@@ -140,7 +142,7 @@ function SMSAlertCenter() {
 
         <div className="status-pill-badge">
           <span className={`dot ${configStatus?.isConfigured ? 'dot-active' : 'dot-sim'}`}></span>
-          <span>{configStatus?.isConfigured ? 'Twilio Live Credentials Active' : 'Twilio Free Trial Sandbox Mode'}</span>
+          <span>{configStatus?.isConfigured ? 'Twilio SMS credentials active' : 'Twilio not configured — messages are not sent'}</span>
         </div>
       </div>
 

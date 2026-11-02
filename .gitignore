@@ -1,2 +1,8 @@
 node_modules
 /backend/.env
+backend/secrets/gemini-api-key.txt
+backend/secrets/twilio.json
+backend/secrets/session-secret.txt
+backend/data/floatchat.db
+backend/data/floatchat.db-wal
+backend/data/floatchat.db-shm

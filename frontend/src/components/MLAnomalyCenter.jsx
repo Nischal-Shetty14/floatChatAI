@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, Cpu, Download, FileText, RefreshCw, AlertTriangle, CheckCircle2, Zap, ShieldAlert, BarChart3, ChevronRight, Send, Radio, Activity } from 'lucide-react';
+import { authHeaders } from '../utils/authClient';
 
 function MLAnomalyCenter({ telemetryData }) {
   const [mlData, setMlData] = useState(null);
@@ -61,11 +62,12 @@ function MLAnomalyCenter({ telemetryData }) {
       const msg = `CRITICAL ML ALERT: ${record.buoyName} (${record.buoyId}) flagged ${record.anomalyTypes ? record.anomalyTypes.join(', ') : 'Tsunami/Flood Threat'}. Risk: ${record.riskPercentage || record.tsunamiRiskPercentage || 85}%.`;
       const res = await fetch('/api/sms/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           message: msg,
           buoyName: record.buoyName,
-          severity: record.severity || 'CRITICAL'
+          severity: record.severity || 'CRITICAL',
+          liveOnly: true
         })
       });
       const data = await res.json();

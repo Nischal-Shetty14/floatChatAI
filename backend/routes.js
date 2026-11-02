@@ -5,11 +5,14 @@ import fs from 'fs';
 import path from 'path';
 import csvParser from 'csv-parser';
 import { fileURLToPath } from 'url';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 
 import { analyzeTelemetryML, getReportContent } from './mlEngine.js';
 import { sendSMS, getSMSLogs, getTwilioConfigStatus, updateTwilioConfig } from './twilioService.js';
 import { disasterStore } from './disasterService.js';
+import { loadGeminiApiKey } from './secrets.js';
+import { requireAuth, requireRole, signToken, authenticate, changePassword } from './auth.js';
+import { createUser, listUsers, listAlerts } from './db.js';
+import { sendBroadcast } from './broadcast.js';
 
 const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
@@ -151,11 +154,80 @@ function generateTelemetrySummary(data) {
 
 // 0. Server Status Check
 router.get('/status', (req, res) => {
+  const twilio = getTwilioConfigStatus();
   return res.json({
     status: 'online',
     isMongoConnected: req.isMongoConnected || false,
-    twilioConfigured: getTwilioConfigStatus().isConfigured
+    twilioConfigured: twilio.smsReady,
+    geminiConfigured: Boolean(loadGeminiApiKey()),
+    twilioAccountReady: twilio.accountReady,
+    twilioSmsReady: twilio.smsReady,
+    twilioWhatsappReady: twilio.whatsappReady
   });
+});
+
+router.post('/auth/register', (req, res) => {
+  try {
+    const { username, fullName, phone, password } = req.body || {};
+    const user = createUser({ username, fullName, phone, password, role: 'user' });
+    const token = signToken(user);
+    return res.json({ token, user });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Could not create the account.' });
+  }
+});
+
+router.post('/auth/login', (req, res) => {
+  try {
+    const { username, password } = req.body || {};
+    const user = authenticate(username, password);
+    if (!user) return res.status(401).json({ error: 'Login id or password is incorrect.' });
+    return res.json({ token: signToken(user), user });
+  } catch (err) {
+    return res.status(400).json({ error: 'Login id or password is incorrect.' });
+  }
+});
+
+router.get('/auth/me', requireAuth, (req, res) => {
+  return res.json({ user: req.user });
+});
+
+router.post('/auth/change-password', requireAuth, (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    changePassword(req.user.id, currentPassword, newPassword);
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Could not change the password.' });
+  }
+});
+
+router.get('/admin/users', requireRole('admin'), (req, res) => {
+  return res.json({ users: listUsers() });
+});
+
+router.post('/admin/warehouse-managers', requireRole('admin'), (req, res) => {
+  try {
+    const { username, fullName, phone, password } = req.body || {};
+    const user = createUser({ username, fullName, phone, password, role: 'warehouse_manager' });
+    return res.json({ success: true, user });
+  } catch (err) {
+    return res.status(400).json({ error: err.message || 'Could not add the warehouse manager.' });
+  }
+});
+
+router.get('/admin/broadcasts', requireRole('admin'), (req, res) => {
+  return res.json({ broadcasts: listAlerts(50) });
+});
+
+router.post('/admin/broadcast', requireRole('admin'), async (req, res) => {
+  try {
+    const { message, channels, testPhone } = req.body || {};
+    const report = await sendBroadcast({ message, channels, testPhone });
+    return res.json(report);
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message || 'Alert dispatch failed.' });
+  }
 });
 
 // 1. Get Telemetry Data
@@ -345,14 +417,14 @@ router.get('/ml/report/download', (req, res) => {
 // ----------------------------------------------------
 
 // 8. Send SMS Alert via Twilio
-router.post('/sms/send', async (req, res) => {
+router.post('/sms/send', requireRole('admin', 'warehouse_manager'), async (req, res) => {
   try {
-    const { to, message, buoyName, severity } = req.body;
+    const { to, message, buoyName, severity, liveOnly, channel } = req.body;
     if (!message) {
       return res.status(400).json({ error: 'Message body is required for SMS dispatch.' });
     }
 
-    const result = await sendSMS({ to, message, buoyName, severity });
+    const result = await sendSMS({ to, message, buoyName, severity, liveOnly: Boolean(liveOnly), channel });
     return res.json(result);
   } catch (error) {
     console.error('Error dispatching SMS alert:', error);
@@ -361,12 +433,12 @@ router.post('/sms/send', async (req, res) => {
 });
 
 // 9. Get Twilio Configuration Status
-router.get('/sms/config', (req, res) => {
+router.get('/sms/config', requireRole('admin'), (req, res) => {
   return res.json(getTwilioConfigStatus());
 });
 
 // 10. Update Twilio Configuration Credentials
-router.post('/sms/config', (req, res) => {
+router.post('/sms/config', requireRole('admin'), (req, res) => {
   try {
     const { accountSid, authToken, fromNumber, recipientPhone } = req.body;
     const updatedStatus = updateTwilioConfig({ accountSid, authToken, fromNumber, recipientPhone });
@@ -377,7 +449,7 @@ router.post('/sms/config', (req, res) => {
 });
 
 // 11. Get SMS Audit Logs
-router.get('/sms/logs', (req, res) => {
+router.get('/sms/logs', requireRole('admin', 'warehouse_manager'), (req, res) => {
   return res.json({
     logs: getSMSLogs()
   });
@@ -454,17 +526,19 @@ router.post('/stream/tick', async (req, res) => {
       smsDetails = await sendSMS({
         message: alertMsg,
         buoyName: newRecord.buoyName,
-        severity: 'CRITICAL'
+        severity: 'CRITICAL',
+        liveOnly: true
       });
-      smsDispatched = true;
+      smsDispatched = Boolean(smsDetails?.success);
     } else if (latestEvaluatedRecord && latestEvaluatedRecord.riskPercentage > 75) {
       const alertMsg = `CRITICAL ANOMALY DETECTED on ${newRecord.buoyName}: ${latestEvaluatedRecord.anomalyTypes.join(', ')}. Risk Score: ${latestEvaluatedRecord.riskPercentage}%. Immediate action required!`;
       smsDetails = await sendSMS({
         message: alertMsg,
         buoyName: newRecord.buoyName,
-        severity: 'CRITICAL'
+        severity: 'CRITICAL',
+        liveOnly: true
       });
-      smsDispatched = true;
+      smsDispatched = Boolean(smsDetails?.success);
     }
 
     return res.json({
@@ -552,7 +626,8 @@ router.post('/disaster/sos', async (req, res) => {
         to: req.body.phone || '+919876543210',
         message: smsMessage,
         buoyName: 'SOS-SENTINEL-COMMAND',
-        severity: 'CRITICAL'
+        severity: 'CRITICAL',
+        liveOnly: true
       });
     } catch (smsErr) {
       console.warn('Twilio SMS auto-dispatch fallback:', smsErr.message);
@@ -561,7 +636,7 @@ router.post('/disaster/sos', async (req, res) => {
     res.json({ 
       success: true, 
       sos,
-      smsDispatched: true,
+      smsDispatched: Boolean(smsDetails?.success),
       smsDetails,
       destinationCenter: 'NDRF State Crisis Command & Coast Guard Maritime Rescue Coordination Centre (MRCC)',
       gatewayAck: sos.gatewayReceiptId
@@ -619,7 +694,10 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message field is required.' });
     }
 
-    const apiKey = customApiKey || process.env.GEMINI_API_KEY;
+    // The local secrets file is the source of truth. A previously saved browser
+    // key must not override it, otherwise an old sidebar value can keep causing
+    // authentication failures after the file has been updated.
+    const apiKey = loadGeminiApiKey() || (typeof customApiKey === 'string' && customApiKey.trim());
 
     let dataset = [];
     if (req.isMongoConnected) {
@@ -740,10 +818,7 @@ I am your AI assistant specialized in marine oceanography, early disaster warnin
       });
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      systemInstruction: `You are FloatChat AI, an expert AI marine oceanographer, emergency disaster coordinator, and crisis response strategist.
+    const systemInstruction = `You are FloatChat AI, an expert AI marine oceanographer, emergency disaster coordinator, and crisis response strategist.
 You provide verified disaster guidance, safe-zone navigation, shelter coordination, and ocean telemetry analysis.
 Support multilingual queries fluently (English, Hindi, Tamil, Bengali, Spanish, Telugu, French).
 
@@ -756,8 +831,7 @@ ${JSON.stringify(shelters.map(s => ({ name: s.name, elevationMeters: s.elevation
 Telemetry Dataset Summary:
 ${summaryContext}
 
-Be concise, life-preserving, reassuring, and format responses with clean markdown (bullet points, bold emergency callouts).`
-    });
+Be concise, life-preserving, reassuring, and format responses with clean markdown (bullet points, bold emergency callouts).`;
 
     const contents = [];
     chatHistory.forEach(turn => {
@@ -772,9 +846,34 @@ Be concise, life-preserving, reassuring, and format responses with clean markdow
       parts: [{ text: message }]
     });
 
-    const result = await model.generateContent({ contents });
-    const response = await result.response;
-    const responseText = response.text();
+    // AI Studio keys created after May 2026 start with AQ. and must be sent
+    // in the x-goog-api-key header. The older SDK query-string call is rejected.
+    const geminiResponse = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents
+        })
+      }
+    );
+    const geminiData = await geminiResponse.json().catch(() => ({}));
+    if (!geminiResponse.ok) {
+      const reason = geminiData?.error?.message || 'Gemini rejected the API key.';
+      throw new Error(reason);
+    }
+    const responseText = (geminiData.candidates?.[0]?.content?.parts || [])
+      .map((part) => part.text || '')
+      .join('')
+      .trim();
+    if (!responseText) {
+      throw new Error('Gemini returned an empty reply.');
+    }
 
     return res.json({
       message: responseText,

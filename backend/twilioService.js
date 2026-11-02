@@ -1,145 +1,237 @@
 import dotenv from 'dotenv';
+import { loadTwilioConfig, saveTwilioConfig } from './secrets.js';
+
 dotenv.config();
 
-// In-memory SMS delivery log store
 const smsDispatchLogs = [];
 
-// Runtime Config state (pre-filled with env values if present)
-let twilioConfig = {
-  accountSid: process.env.TWILIO_ACCOUNT_SID || '',
-  authToken: process.env.TWILIO_AUTH_TOKEN || '',
-  fromNumber: process.env.TWILIO_PHONE_NUMBER || '',
-  recipientPhone: process.env.ALERT_RECIPIENT_PHONE || ''
-};
-
-export function updateTwilioConfig(newConfig) {
-  twilioConfig = {
-    ...twilioConfig,
-    ...newConfig
+function reloadConfig() {
+  const fileConfig = loadTwilioConfig();
+  return {
+    accountSid: fileConfig.accountSid || '',
+    authToken: fileConfig.authToken || '',
+    fromNumber: fileConfig.smsFromNumber || '',
+    whatsappFromNumber: fileConfig.whatsappFromNumber || '',
+    recipientPhone: process.env.ALERT_RECIPIENT_PHONE || ''
   };
+}
+
+function credentialsLookReal(accountSid, authToken) {
+  return Boolean(
+    accountSid &&
+    authToken &&
+    !accountSid.includes('YOUR_') &&
+    !authToken.includes('YOUR_') &&
+    !accountSid.toLowerCase().includes('paste')
+  );
+}
+
+function asWhatsAppAddress(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('whatsapp:')) return raw;
+  const number = raw.startsWith('+') ? raw : `+${raw.replace(/[^\d]/g, '')}`;
+  return `whatsapp:${number}`;
+}
+
+function asSmsAddress(value) {
+  const raw = String(value || '').trim().replace(/^whatsapp:/, '');
+  if (!raw) return '';
+  return raw.startsWith('+') ? raw : `+${raw.replace(/[^\d]/g, '')}`;
+}
+
+export function updateTwilioConfig(newConfig = {}) {
+  saveTwilioConfig({
+    accountSid: newConfig.accountSid,
+    authToken: newConfig.authToken,
+    smsFromNumber: newConfig.fromNumber || newConfig.smsFromNumber,
+    whatsappFromNumber: newConfig.whatsappFromNumber
+  });
   return getTwilioConfigStatus();
 }
 
 export function getTwilioConfigStatus() {
+  const config = reloadConfig();
+  const accountReady = credentialsLookReal(config.accountSid, config.authToken);
+  const smsReady = accountReady && Boolean(asSmsAddress(config.fromNumber));
+  const whatsappReady = accountReady && Boolean(config.whatsappFromNumber);
   return {
-    isConfigured: Boolean(twilioConfig.accountSid && twilioConfig.authToken && twilioConfig.fromNumber),
-    accountSidMasked: twilioConfig.accountSid ? `${twilioConfig.accountSid.slice(0, 6)}...${twilioConfig.accountSid.slice(-4)}` : 'NOT_SET',
-    fromNumber: twilioConfig.fromNumber || 'NOT_SET',
-    recipientPhone: twilioConfig.recipientPhone || 'NOT_SET'
+    isConfigured: smsReady,
+    accountReady,
+    smsReady,
+    whatsappReady,
+    accountSidMasked: config.accountSid
+      ? `${config.accountSid.slice(0, 6)}...${config.accountSid.slice(-4)}`
+      : 'NOT_SET',
+    fromNumber: config.fromNumber || 'NOT_SET',
+    whatsappFromNumber: config.whatsappFromNumber || 'NOT_SET',
+    recipientPhone: config.recipientPhone || 'NOT_SET'
   };
 }
 
-/**
- * Sends SMS via Twilio API or high-fidelity simulation engine
- */
-export async function sendSMS({ to, message, buoyName, severity }) {
-  const recipient = to || twilioConfig.recipientPhone || '+15005550006';
-  const timestamp = new Date().toISOString();
-  
-  // Format message text nicely
-  let formattedMessage = message;
-  if (!formattedMessage.includes('FloatChat AI Alert')) {
-    formattedMessage = `🚨 FloatChat AI Alert [${severity || 'CRITICAL'}]: ${buoyName ? `Buoy ${buoyName}` : 'Ocean Sensor Network'} - ${message}`;
-  }
-
-  const { accountSid, authToken, fromNumber } = twilioConfig;
-
-  // Check if real Twilio credentials are present
-  const hasValidCreds = accountSid && authToken && fromNumber && !accountSid.includes('YOUR_') && !authToken.includes('YOUR_');
-
-  if (hasValidCreds) {
-    try {
-      console.log(`[Twilio Service] Dispatching real Twilio SMS to ${recipient}...`);
-      
-      const authHeader = 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64');
-      const bodyParams = new URLSearchParams();
-      bodyParams.append('To', recipient);
-      bodyParams.append('From', fromNumber);
-      bodyParams.append('Body', formattedMessage);
-
-      const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
-        method: 'POST',
-        headers: {
-          'Authorization': authHeader,
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: bodyParams.toString()
-      });
-
-      const responseData = await response.json();
-
-      if (response.ok) {
-        const logEntry = {
-          id: `SMS-${Date.now()}`,
-          timestamp,
-          recipient,
-          fromNumber,
-          message: formattedMessage,
-          status: 'DELIVERED',
-          mode: 'TWILIO_REST_API',
-          sid: responseData.sid,
-          buoyName: buoyName || 'System'
-        };
-        smsDispatchLogs.unshift(logEntry);
-        return { success: true, mode: 'TWILIO_REST_API', sid: responseData.sid, log: logEntry };
-      } else {
-        console.warn('[Twilio API Error]:', responseData);
-        const logEntry = {
-          id: `SMS-${Date.now()}`,
-          timestamp,
-          recipient,
-          fromNumber,
-          message: formattedMessage,
-          status: 'TWILIO_API_ERROR',
-          errorMessage: responseData.message || responseData.detail || 'Twilio authorization failed',
-          mode: 'TWILIO_FAILED_FALLBACK_SIMULATED',
-          buoyName: buoyName || 'System'
-        };
-        smsDispatchLogs.unshift(logEntry);
-        return { success: false, mode: 'TWILIO_FAILED_FALLBACK_SIMULATED', error: responseData.message, log: logEntry };
-      }
-
-    } catch (err) {
-      console.error('[Twilio Service Exception]:', err);
-      const logEntry = {
-        id: `SMS-${Date.now()}`,
-        timestamp,
-        recipient,
-        fromNumber: fromNumber || 'Twilio-Free-Trial',
-        message: formattedMessage,
-        status: 'EXCEPTION_SIMULATED',
-        errorMessage: err.message,
-        mode: 'SIMULATED_TEST_MODE',
-        buoyName: buoyName || 'System'
-      };
-      smsDispatchLogs.unshift(logEntry);
-      return { success: true, mode: 'SIMULATED_TEST_MODE', error: err.message, log: logEntry };
-    }
-  }
-
-  // Free Subscription Simulation Mode when credentials aren't set in environment
-  console.log(`[Twilio Service] Operating in Twilio Free Subscription Simulation Mode for ${recipient}`);
-  const logEntry = {
-    id: `SMS-${Date.now()}`,
-    timestamp,
-    recipient,
-    fromNumber: fromNumber || '+18005550199 (Twilio Free Trial)',
-    message: `(Sent from your Twilio trial account) ${formattedMessage}`,
-    status: 'DELIVERED_SIMULATED',
-    mode: 'FREE_TRIAL_SIMULATED',
-    sid: `SM${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
-    buoyName: buoyName || 'System'
-  };
-
-  smsDispatchLogs.unshift(logEntry);
+function remember(entry) {
+  smsDispatchLogs.unshift(entry);
   if (smsDispatchLogs.length > 50) smsDispatchLogs.pop();
+  return entry;
+}
+
+async function postToTwilio({ to, from, body }) {
+  const config = reloadConfig();
+  const authHeader = `Basic ${Buffer.from(`${config.accountSid}:${config.authToken}`).toString('base64')}`;
+  const bodyParams = new URLSearchParams();
+  bodyParams.append('To', to);
+  bodyParams.append('From', from);
+  bodyParams.append('Body', body);
+
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.accountSid}/Messages.json`, {
+    method: 'POST',
+    headers: {
+      Authorization: authHeader,
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: bodyParams.toString()
+  });
+
+  const data = await response.json().catch(() => ({}));
+  return { ok: response.ok, data };
+}
+
+/**
+ * Real Twilio send. Never reports success unless Twilio accepts the message.
+ * channel: 'sms' | 'whatsapp'
+ */
+export async function sendLiveAlert({ to, message, channel, recipientName }) {
+  const config = reloadConfig();
+  const status = getTwilioConfigStatus();
+  const isWhatsApp = channel === 'whatsapp';
+  const recipient = isWhatsApp ? asWhatsAppAddress(to) : asSmsAddress(to);
+  const from = isWhatsApp ? asWhatsAppAddress(config.whatsappFromNumber) : asSmsAddress(config.fromNumber);
+  const mode = isWhatsApp ? 'TWILIO_WHATSAPP' : 'TWILIO_SMS';
+
+  if (!status.accountReady || !from || !recipient) {
+    const error = !status.accountReady
+      ? 'Twilio accountSid or authToken is missing in backend/secrets/twilio.json.'
+      : `Twilio ${isWhatsApp ? 'whatsappFromNumber' : 'smsFromNumber'} is missing in backend/secrets/twilio.json.`;
+    const log = remember({
+      id: `SMS-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      recipient,
+      fromNumber: from || 'NOT_SET',
+      message,
+      status: 'FAILED',
+      mode: 'NOT_CONFIGURED',
+      errorMessage: error,
+      buoyName: recipientName || 'Alert'
+    });
+    return { success: false, channel, status: 'FAILED', mode: 'NOT_CONFIGURED', sid: null, error, log };
+  }
+
+  try {
+    const result = await postToTwilio({ to: recipient, from, body: message });
+    if (result.ok) {
+      const log = remember({
+        id: `SMS-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        recipient,
+        fromNumber: from,
+        message,
+        status: result.data.status || 'queued',
+        mode,
+        sid: result.data.sid,
+        buoyName: recipientName || 'Alert'
+      });
+      return {
+        success: true,
+        channel,
+        status: result.data.status || 'queued',
+        mode,
+        sid: result.data.sid || null,
+        error: null,
+        log
+      };
+    }
+
+    const error = result.data.message || result.data.detail || 'Twilio rejected the message.';
+    const log = remember({
+      id: `SMS-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      recipient,
+      fromNumber: from,
+      message,
+      status: 'FAILED',
+      mode: 'TWILIO_API_ERROR',
+      errorMessage: error,
+      sid: result.data.sid || null,
+      buoyName: recipientName || 'Alert'
+    });
+    return { success: false, channel, status: 'FAILED', mode: 'TWILIO_API_ERROR', sid: result.data.sid || null, error, log };
+  } catch (err) {
+    const log = remember({
+      id: `SMS-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      recipient,
+      fromNumber: from,
+      message,
+      status: 'FAILED',
+      mode: 'TWILIO_API_ERROR',
+      errorMessage: err.message,
+      buoyName: recipientName || 'Alert'
+    });
+    return { success: false, channel, status: 'FAILED', mode: 'TWILIO_API_ERROR', sid: null, error: err.message, log };
+  }
+}
+
+/**
+ * Existing single-message helper used by the ocean alert screens.
+ * Falls back to a clearly labeled simulation only when Twilio is not configured,
+ * so older demo buttons still respond. Admin citizen alerts do not use this path.
+ */
+export async function sendSMS({ to, message, buoyName, severity, liveOnly = false, channel = 'sms' }) {
+  const config = reloadConfig();
+  const recipient = to || config.recipientPhone || '';
+  let formattedMessage = message;
+  if (formattedMessage && !formattedMessage.includes('FloatChat AI')) {
+    formattedMessage = `FloatChat AI Alert [${severity || 'CRITICAL'}]: ${buoyName ? `Buoy ${buoyName}` : 'Ocean Sensor Network'} - ${message}`;
+  }
+
+  if (liveOnly || channel === 'whatsapp') {
+    return sendLiveAlert({
+      to: recipient,
+      message: formattedMessage,
+      channel,
+      recipientName: buoyName
+    });
+  }
+
+  const status = getTwilioConfigStatus();
+  if (status.accountReady && status.smsReady && recipient) {
+    return sendLiveAlert({
+      to: recipient,
+      message: formattedMessage,
+      channel: 'sms',
+      recipientName: buoyName
+    });
+  }
+
+  const log = remember({
+    id: `SMS-${Date.now()}`,
+    timestamp: new Date().toISOString(),
+    recipient: recipient || 'NOT_SET',
+    fromNumber: config.fromNumber || '+18005550199 (not configured)',
+    message: formattedMessage,
+    status: 'NOT_SENT',
+    mode: 'NOT_CONFIGURED',
+    sid: null,
+    buoyName: buoyName || 'System',
+    errorMessage: 'Twilio is not configured. Paste credentials into backend/secrets/twilio.json.'
+  });
 
   return {
-    success: true,
-    mode: 'FREE_TRIAL_SIMULATED',
-    sid: logEntry.sid,
-    log: logEntry,
-    message: 'SMS sent via Twilio Trial Sandbox Simulation (Enter live Twilio SID/Auth Token in Settings to route via cellular network)'
+    success: false,
+    mode: 'NOT_CONFIGURED',
+    sid: null,
+    log,
+    error: 'Twilio is not configured, so this message was not sent. Paste credentials into backend/secrets/twilio.json.'
   };
 }
 

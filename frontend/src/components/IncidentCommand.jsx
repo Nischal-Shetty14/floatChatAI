@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShieldAlert, Play, Square, AlertTriangle, CheckCircle2, Send, Activity, Flame, Droplets, Zap, Clock, ListChecks, Radio } from 'lucide-react';
+import { authHeaders } from '../utils/authClient';
 
 function IncidentCommand({ telemetryData, onRefreshTelemetry }) {
   const [isStreaming, setIsStreaming] = useState(false);
@@ -224,11 +225,12 @@ function IncidentCommand({ telemetryData, onRefreshTelemetry }) {
       const msg = `EMERGENCY DISASTER ALERT ${inc.id} [${inc.buoyName}]: ${inc.title} - ${inc.detectedValue}. Risk Score: ${inc.mlRiskScore}%. Immediate action required!`;
       const res = await fetch('/api/sms/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           message: msg,
           buoyName: inc.buoyName,
-          severity: inc.severity
+          severity: inc.severity,
+          liveOnly: true
         })
       });
       const data = await res.json();

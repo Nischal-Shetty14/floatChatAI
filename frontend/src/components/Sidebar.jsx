@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { 
   LayoutDashboard, UploadCloud, RefreshCw, Key, Info, 
   Database, Brain, PhoneCall, Activity, Compass, 
-  AlertTriangle, Building2, Radio, Users, ShieldAlert 
+  AlertTriangle, Building2, Radio, Users, ShieldAlert, LogOut
 } from 'lucide-react';
+import { authHeaders } from '../utils/authClient';
+import { ROLE_LABELS } from '../utils/roles';
 
 export default function Sidebar({ 
   activeTab, 
@@ -14,14 +16,43 @@ export default function Sidebar({
   setApiKey, 
   isMongoConnected,
   alertCount,
-  activeSOSCount
+  activeSOSCount,
+  allowedTabs = [],
+  currentUser,
+  onLogout
 }) {
   const [showKeyInput, setShowKeyInput] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+  const [passwordNote, setPasswordNote] = useState('');
+  const can = (tab) => allowedTabs.includes(tab);
+  const isAdmin = currentUser?.role === 'admin';
 
   const handleKeyChange = (e) => {
     const key = e.target.value;
     setApiKey(key);
     localStorage.setItem('floatchat_gemini_key', key);
+  };
+
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+    setPasswordNote('');
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(passwordForm)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setPasswordNote(data.error || 'Could not change the password.');
+        return;
+      }
+      setPasswordForm({ currentPassword: '', newPassword: '' });
+      setPasswordNote('Password updated.');
+    } catch {
+      setPasswordNote('The server could not be reached.');
+    }
   };
 
   return (
@@ -83,6 +114,7 @@ export default function Sidebar({
             <span>Family Safety Check</span>
           </div>
 
+          {can('rescue-command') && (
           <div 
             className={`nav-item ${activeTab === 'rescue-command' ? 'active' : ''}`}
             onClick={() => setActiveTab('rescue-command')}
@@ -90,6 +122,7 @@ export default function Sidebar({
             <ShieldAlert size={18} color="#ff7fa1" />
             <span>Live Rescue Command</span>
           </div>
+          )}
 
           {/* Section: Ocean Telemetry & ML */}
           <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '1px', padding: '14px 12px 4px 12px', textTransform: 'uppercase' }}>
@@ -107,6 +140,7 @@ export default function Sidebar({
             )}
           </div>
 
+          {can('ml-anomaly') && (
           <div 
             className={`nav-item ${activeTab === 'ml-anomaly' ? 'active' : ''}`}
             onClick={() => setActiveTab('ml-anomaly')}
@@ -115,7 +149,9 @@ export default function Sidebar({
             <span>ML Anomaly Engine</span>
             <span className="nav-tag nav-tag-ml">ML</span>
           </div>
+          )}
 
+          {can('sms-alerts') && (
           <div 
             className={`nav-item ${activeTab === 'sms-alerts' ? 'active' : ''}`}
             onClick={() => setActiveTab('sms-alerts')}
@@ -123,7 +159,9 @@ export default function Sidebar({
             <PhoneCall size={18} />
             <span>Twilio SMS Alerts</span>
           </div>
+          )}
 
+          {can('incidents') && (
           <div 
             className={`nav-item ${activeTab === 'incidents' ? 'active' : ''}`}
             onClick={() => setActiveTab('incidents')}
@@ -131,7 +169,9 @@ export default function Sidebar({
             <Activity size={18} />
             <span>Incident Command</span>
           </div>
+          )}
 
+          {can('upload') && (
           <div 
             className={`nav-item ${activeTab === 'upload' ? 'active' : ''}`}
             onClick={() => setActiveTab('upload')}
@@ -139,6 +179,17 @@ export default function Sidebar({
             <UploadCloud size={18} />
             <span>Upload Data</span>
           </div>
+          )}
+
+          {can('admin-portal') && (
+          <div 
+            className={`nav-item ${activeTab === 'admin-portal' ? 'active' : ''}`}
+            onClick={() => setActiveTab('admin-portal')}
+          >
+            <Users size={18} color="var(--color-primary)" />
+            <span>Users & Phone Alerts</span>
+          </div>
+          )}
 
           <div 
             className={`nav-item ${activeTab === 'about' ? 'active' : ''}`}
@@ -165,7 +216,14 @@ export default function Sidebar({
           </span>
         </div>
 
-        {/* Gemini API Key Toggle */}
+        {currentUser && (
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{currentUser.fullName}</div>
+            <div>{ROLE_LABELS[currentUser.role] || currentUser.role}</div>
+          </div>
+        )}
+
+        {isAdmin && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <button 
             className="btn-secondary" 
@@ -187,8 +245,9 @@ export default function Sidebar({
             />
           )}
         </div>
+        )}
 
-        {/* Reset Database Button */}
+        {isAdmin && (
         <button 
           className="btn-secondary" 
           style={{ 
@@ -204,6 +263,31 @@ export default function Sidebar({
         >
           <RefreshCw size={14} className={isResetting ? 'spinner' : ''} />
           <span>{isResetting ? 'Resetting...' : 'Reset Default Data'}</span>
+        </button>
+        )}
+
+        <button
+          className="btn-secondary"
+          style={{ padding: '8px 12px', fontSize: '12px', justifyContent: 'center', width: '100%' }}
+          onClick={() => setShowPasswordForm((open) => !open)}
+        >
+          Change password
+        </button>
+        {showPasswordForm && (
+          <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <input className="input-field" type="password" placeholder="Current password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} style={{ fontSize: '11px', padding: '6px 10px' }} />
+            <input className="input-field" type="password" placeholder="New password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} style={{ fontSize: '11px', padding: '6px 10px' }} />
+            <button className="btn-primary" type="submit" style={{ justifyContent: 'center', fontSize: '12px' }}>Save password</button>
+            {passwordNote && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{passwordNote}</div>}
+          </form>
+        )}
+        <button
+          className="btn-secondary"
+          style={{ padding: '8px 12px', fontSize: '12px', justifyContent: 'center', width: '100%' }}
+          onClick={onLogout}
+        >
+          <LogOut size={14} />
+          <span>Log out</span>
         </button>
 
         <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px' }}>
