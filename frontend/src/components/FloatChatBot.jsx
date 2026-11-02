@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare, X, Trash2, HelpCircle } from 'lucide-react';
 
-export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
+export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
   const [messages, setMessages] = useState([
     {
       role: 'model',
@@ -61,8 +61,7 @@ export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
         },
         body: JSON.stringify({
           message: text,
-          chatHistory: chatHistory,
-          customApiKey: apiKey
+          chatHistory: chatHistory
         })
       });
 
@@ -80,7 +79,7 @@ export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, { 
         role: 'model', 
-        content: `⚠️ **Network error.** Please verify that the FloatChat backend server is running on port 5000.` 
+        content: `⚠️ **Network error.** Please verify that the FloatChat backend server is running on port 5001.` 
       }]);
     } finally {
       setIsLoading(false);
@@ -168,8 +167,8 @@ export default function FloatChatBot({ isOpen, onClose, apiKey, activeBuoy }) {
           <span className="gradient-text">FloatChat Analyst</span>
         </div>
         {geminiReady === false && (
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Practice replies until a Gemini key is pasted into backend/secrets/gemini-api-key.txt
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.4 }}>
+            Rule-based mode — configure <code style={{ background: 'var(--bg-page)', padding: '1px 4px', borderRadius: '3px' }}>GEMINI_API_KEY</code> in backend/.env
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

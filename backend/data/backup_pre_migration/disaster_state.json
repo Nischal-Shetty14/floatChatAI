@@ -1,0 +1,397 @@
+{
+  "activeScenarioKey": "cyclone",
+  "activeScenario": {
+    "id": "SCENARIO-CYCLONE-02",
+    "type": "CYCLONE",
+    "name": "Category-4 Supercyclone \"Vardah II\"",
+    "severity": "CRITICAL",
+    "agency": "Regional Specialized Meteorological Centre (RSMC) / IMD",
+    "timestamp": "2026-10-17T09:35:47.156Z",
+    "epicenter": {
+      "lat": 13.1,
+      "lng": 84.2
+    },
+    "windSpeedKph": 195,
+    "gustSpeedKph": 220,
+    "centralPressureHpa": 938,
+    "stormSurgeMeters": 3.8,
+    "coastalEtaMinutes": 140,
+    "affectedSectors": [
+      "Coastal Highway Strip",
+      "River Delta Estuary",
+      "North Beach Residential"
+    ],
+    "elevationHazardLimitMeters": 18,
+    "evacuationPriority": "REINFORCED_SHELTER_LOCKDOWN",
+    "instructions": "Seek shelter in Cat-5 engineered concrete shelters. Fasten storm shutters, turn off gas/electrical mains, and stay in interior rooms away from glass windows."
+  },
+  "shelters": [
+    {
+      "id": "SHELTER-01",
+      "name": "St. Jude High-Elevation Safe Citadel",
+      "address": "44 Summit Ridge Road, North Sector",
+      "lat": 13.085,
+      "lng": 80.195,
+      "elevationMeters": 44,
+      "totalCapacity": 850,
+      "currentOccupancy": 540,
+      "structureRating": "Tsunami & Earthquake Grade 9 Citadel",
+      "contactPhone": "+1-800-555-0101",
+      "distanceKm": 2.3,
+      "status": "OPEN",
+      "facilities": {
+        "medicalClinic": true,
+        "potableWater": true,
+        "solarMicrogrid": true,
+        "dieselBackup": true,
+        "babyCare": true,
+        "wheelchairAccess": true,
+        "petFriendly": true,
+        "starlinkMeshUplink": true
+      },
+      "supplies": {
+        "waterLiters": 8500,
+        "foodMeals": 3400,
+        "medicalKits": 140,
+        "blankets": 650
+      }
+    },
+    {
+      "id": "SHELTER-02",
+      "name": "Naval Station Fort Coastal Bunker",
+      "address": "Pier 12, Naval Defense Perimeter",
+      "lat": 13.065,
+      "lng": 80.225,
+      "elevationMeters": 28,
+      "totalCapacity": 1400,
+      "currentOccupancy": 1260,
+      "structureRating": "Cat-5 Supercyclone Bunker & Helipad",
+      "contactPhone": "+1-800-555-0102",
+      "distanceKm": 1.4,
+      "status": "NEAR_CAPACITY",
+      "facilities": {
+        "medicalClinic": true,
+        "potableWater": true,
+        "solarMicrogrid": true,
+        "dieselBackup": true,
+        "babyCare": false,
+        "wheelchairAccess": true,
+        "petFriendly": false,
+        "starlinkMeshUplink": true
+      },
+      "supplies": {
+        "waterLiters": 1950,
+        "foodMeals": 1100,
+        "medicalKits": 28,
+        "blankets": 320
+      }
+    },
+    {
+      "id": "SHELTER-03",
+      "name": "Hilltop Community Center & Polytech",
+      "address": "88 Highland Avenue, West Ward",
+      "lat": 13.098,
+      "lng": 80.175,
+      "elevationMeters": 58,
+      "totalCapacity": 650,
+      "currentOccupancy": 310,
+      "structureRating": "Flood-Immune Reinforced Concrete Complex",
+      "contactPhone": "+1-800-555-0103",
+      "distanceKm": 3.8,
+      "status": "OPEN",
+      "facilities": {
+        "medicalClinic": true,
+        "potableWater": true,
+        "solarMicrogrid": true,
+        "dieselBackup": true,
+        "babyCare": true,
+        "wheelchairAccess": true,
+        "petFriendly": true,
+        "starlinkMeshUplink": true
+      },
+      "supplies": {
+        "waterLiters": 7800,
+        "foodMeals": 4200,
+        "medicalKits": 95,
+        "blankets": 700
+      }
+    },
+    {
+      "id": "SHELTER-04",
+      "name": "Govt Model Higher Secondary Safe Haven",
+      "address": "12 Central Boulevard, Sector 4",
+      "lat": 13.045,
+      "lng": 80.21,
+      "elevationMeters": 34,
+      "totalCapacity": 900,
+      "currentOccupancy": 710,
+      "structureRating": "State Engineered Emergency Evac Facility",
+      "contactPhone": "+1-800-555-0104",
+      "distanceKm": 2.9,
+      "status": "OPEN",
+      "facilities": {
+        "medicalClinic": true,
+        "potableWater": true,
+        "solarMicrogrid": false,
+        "dieselBackup": true,
+        "babyCare": true,
+        "wheelchairAccess": true,
+        "petFriendly": false,
+        "starlinkMeshUplink": false
+      },
+      "supplies": {
+        "waterLiters": 4100,
+        "foodMeals": 2200,
+        "medicalKits": 62,
+        "blankets": 480
+      }
+    }
+  ],
+  "warehouses": [
+    {
+      "id": "WH-CENTRAL-01",
+      "name": "Central Disaster Logistics Depot (Ridge North)",
+      "lat": 13.12,
+      "lng": 80.16,
+      "elevationMeters": 62,
+      "accessibleByRoad": true,
+      "inventory": {
+        "waterLiters": 65000,
+        "foodMeals": 28000,
+        "medicalKits": 650,
+        "antibioticsUnits": 1200,
+        "blankets": 4800,
+        "waterPurificationTabs": 50000,
+        "satelliteRadios": 120
+      },
+      "availableTransport": [
+        {
+          "id": "TRK-01",
+          "type": "Heavy Amphibious 6x6 Cargo Truck",
+          "capacityKg": 8000,
+          "status": "AVAILABLE"
+        },
+        {
+          "id": "TRK-02",
+          "type": "All-Terrain High-Clearance 4x4",
+          "capacityKg": 4000,
+          "status": "AVAILABLE"
+        },
+        {
+          "id": "HEL-01",
+          "type": "SAR Heavy-Lift Helicopter Puma-1",
+          "capacityKg": 2500,
+          "status": "STANDBY"
+        }
+      ]
+    },
+    {
+      "id": "WH-PORT-02",
+      "name": "Port Sector Staging Warehouse Beta",
+      "lat": 13.055,
+      "lng": 80.245,
+      "elevationMeters": 16,
+      "accessibleByRoad": false,
+      "inventory": {
+        "waterLiters": 14000,
+        "foodMeals": 6200,
+        "medicalKits": 140,
+        "antibioticsUnits": 300,
+        "blankets": 1100,
+        "waterPurificationTabs": 12000,
+        "satelliteRadios": 25
+      },
+      "availableTransport": [
+        {
+          "id": "BOAT-01",
+          "type": "Twin-Hull Flood Rescue Cargo Vessel",
+          "capacityKg": 3500,
+          "status": "AVAILABLE"
+        }
+      ]
+    },
+    {
+      "id": "WH-WEST-03",
+      "name": "West Ward Airfield Strategic Hub",
+      "lat": 13.078,
+      "lng": 80.14,
+      "elevationMeters": 52,
+      "accessibleByRoad": true,
+      "inventory": {
+        "waterLiters": 42000,
+        "foodMeals": 19500,
+        "medicalKits": 420,
+        "antibioticsUnits": 850,
+        "blankets": 3200,
+        "waterPurificationTabs": 35000,
+        "satelliteRadios": 90
+      },
+      "availableTransport": [
+        {
+          "id": "TRK-03",
+          "type": "All-Terrain Tactical Transporter",
+          "capacityKg": 6000,
+          "status": "AVAILABLE"
+        }
+      ]
+    }
+  ],
+  "sosRecords": [
+    {
+      "id": "SOS-2026-1154",
+      "timestamp": "2026-10-17T09:37:55.768Z",
+      "userName": "Citizen Survivor",
+      "phone": "+91-98765-43210",
+      "lat": 13.042,
+      "lng": 80.231,
+      "elevationMeters": 6,
+      "emergencyType": "RISING_WATER_FLOOD",
+      "peopleCount": {
+        "adults": 2,
+        "children": 1,
+        "elderly": 1,
+        "disabled": 0,
+        "total": 4
+      },
+      "medicalNotes": "Elderly diabetic with insulin requirement. Water rising rapidly on 1st floor.",
+      "triageScore": "CRITICAL_P1",
+      "status": "QUEUED",
+      "assignedUnit": null,
+      "networkOrigin": "ONLINE_CELLULAR",
+      "hopCount": 0,
+      "acknowledgedByGateway": true
+    },
+    {
+      "id": "SOS-2026-9011",
+      "timestamp": "2026-10-17T09:21:36.494Z",
+      "userName": "Priya Sharma & Family",
+      "phone": "+91-98765-43210",
+      "lat": 13.042,
+      "lng": 80.231,
+      "elevationMeters": 6,
+      "emergencyType": "RISING_WATER_FLOOD",
+      "peopleCount": {
+        "adults": 2,
+        "children": 2,
+        "elderly": 1,
+        "disabled": 0
+      },
+      "medicalNotes": "Elderly diabetic with insulin requirement. Water at 1.4m and rising.",
+      "triageScore": "CRITICAL_P1",
+      "status": "ON_SCENE",
+      "assignedUnit": {
+        "id": "SAR-BOAT-03",
+        "name": "NDRF Swift-Water Rescue Vessel Alpha",
+        "callsign": "RESCUE-EAGLE-3",
+        "responderCount": 4,
+        "lat": 13.048,
+        "lng": 80.226,
+        "distanceKm": 0.8,
+        "etaMinutes": 4
+      },
+      "networkOrigin": "BLE_MESH_RELAY",
+      "hopCount": 3,
+      "acknowledgedByGateway": true
+    },
+    {
+      "id": "SOS-2026-9012",
+      "timestamp": "2026-10-17T09:08:36.494Z",
+      "userName": "Karthik Raman",
+      "phone": "+91-98401-23456",
+      "lat": 13.071,
+      "lng": 80.218,
+      "elevationMeters": 14,
+      "emergencyType": "STRUCTURAL_COLLAPSE_TRAPPED",
+      "peopleCount": {
+        "adults": 3,
+        "children": 0,
+        "elderly": 0,
+        "disabled": 1
+      },
+      "medicalNotes": "Leg fracture trapped under collapsed roof beam.",
+      "triageScore": "CRITICAL_P1",
+      "status": "DISPATCHED",
+      "assignedUnit": {
+        "id": "SAR-MEDIC-01",
+        "name": "Urban Search & Extrication Squad Delta",
+        "callsign": "LIFE-SAVER-1",
+        "responderCount": 6,
+        "lat": 13.082,
+        "lng": 80.205,
+        "distanceKm": 1.8,
+        "etaMinutes": 9
+      },
+      "networkOrigin": "CELLULAR_ONLINE",
+      "hopCount": 0,
+      "acknowledgedByGateway": true
+    },
+    {
+      "id": "SOS-2026-9013",
+      "timestamp": "2026-10-17T09:29:36.494Z",
+      "userName": "Ananya & Ramesh",
+      "phone": "+91-97110-88223",
+      "lat": 13.059,
+      "lng": 80.238,
+      "elevationMeters": 8,
+      "emergencyType": "LOST_STRANDED_NO_POWER",
+      "peopleCount": {
+        "adults": 2,
+        "children": 1,
+        "elderly": 0,
+        "disabled": 0
+      },
+      "medicalNotes": "Cell tower down, phone battery 12%. Need route to safe shelter.",
+      "triageScore": "HIGH_P2",
+      "status": "QUEUED",
+      "assignedUnit": null,
+      "networkOrigin": "WIFI_DIRECT_MESH",
+      "hopCount": 2,
+      "acknowledgedByGateway": true
+    }
+  ],
+  "familyCheckins": [
+    {
+      "id": "CHK-1001",
+      "timestamp": "2026-10-17T09:15:36.494Z",
+      "phone": "+91-98765-43210",
+      "fullName": "Priya Sharma",
+      "status": "NEED_ASSISTANCE",
+      "currentLocationName": "Submerged Marina Colony (Near Pier 4)",
+      "shelterId": null,
+      "lat": 13.042,
+      "lng": 80.231,
+      "batteryPercent": 28,
+      "message": "We are on the second floor roof. SOS requested. Water still rising but we are safe for now.",
+      "viaMesh": true
+    },
+    {
+      "id": "CHK-1002",
+      "timestamp": "2026-10-17T08:53:36.494Z",
+      "phone": "+91-98401-11223",
+      "fullName": "Rajesh Subramanian",
+      "status": "SAFE_AT_SHELTER",
+      "currentLocationName": "St. Jude High-Elevation Safe Citadel",
+      "shelterId": "SHELTER-01",
+      "lat": 13.085,
+      "lng": 80.195,
+      "batteryPercent": 78,
+      "message": "Arrived at St. Jude Citadel safely with grandma. Power, warm food, and medical checkup available.",
+      "viaMesh": false
+    },
+    {
+      "id": "CHK-1003",
+      "timestamp": "2026-10-17T09:25:36.494Z",
+      "phone": "+91-99402-33445",
+      "fullName": "Divya & Children",
+      "status": "EVACUATING",
+      "currentLocationName": "Heading towards Hilltop Community Center via Ridge Bypass",
+      "shelterId": "SHELTER-03",
+      "lat": 13.089,
+      "lng": 80.18,
+      "batteryPercent": 54,
+      "message": "Walking along North Ridge high-ground bypass. Avoiding coastal highway.",
+      "viaMesh": true
+    }
+  ],
+  "activeConvoys": []
+}

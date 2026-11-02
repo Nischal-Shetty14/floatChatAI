@@ -1,19 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  LayoutDashboard, UploadCloud, RefreshCw, Key, Info, 
-  Database, Brain, PhoneCall, Activity, Compass, 
-  AlertTriangle, Building2, Radio, Users, ShieldAlert, LogOut
+import {
+  LayoutDashboard, UploadCloud, RefreshCw, Info,
+  Database, Brain, PhoneCall, Activity, Compass,
+  AlertTriangle, Building2, Radio, Users, ShieldAlert,
+  LogOut, Waves, Key, Lock, Server, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { authHeaders } from '../utils/authClient';
 import { ROLE_LABELS } from '../utils/roles';
 
-export default function Sidebar({ 
-  activeTab, 
-  setActiveTab, 
-  onResetDb, 
-  isResetting, 
-  apiKey, 
-  setApiKey, 
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  onResetDb,
+  isResetting,
+  apiKey,
+  setApiKey,
   isMongoConnected,
   alertCount,
   activeSOSCount,
@@ -25,14 +26,10 @@ export default function Sidebar({
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [passwordNote, setPasswordNote] = useState('');
+  const [geminiReady, setGeminiReady] = useState(null);
+
   const can = (tab) => allowedTabs.includes(tab);
   const isAdmin = currentUser?.role === 'admin';
-
-  const handleKeyChange = (e) => {
-    const key = e.target.value;
-    setApiKey(key);
-    localStorage.setItem('floatchat_gemini_key', key);
-  };
 
   const handlePasswordChange = async (event) => {
     event.preventDefault();
@@ -49,251 +46,198 @@ export default function Sidebar({
         return;
       }
       setPasswordForm({ currentPassword: '', newPassword: '' });
-      setPasswordNote('Password updated.');
+      setPasswordNote('Password updated successfully.');
     } catch {
       setPasswordNote('The server could not be reached.');
     }
   };
 
+  const NavItem = ({ tab, icon: Icon, label, badge, badgeColor, iconColor }) => {
+    const isActive = activeTab === tab;
+    return (
+      <div
+        className={`nav-item ${isActive ? 'active' : ''}`}
+        onClick={() => setActiveTab(tab)}
+      >
+        <Icon size={16} color={isActive ? 'var(--color-secondary)' : (iconColor || 'rgba(255,255,255,0.5)')} />
+        <span style={{ flex: 1 }}>{label}</span>
+        {badge > 0 && (
+          <span style={{
+            background: badgeColor || 'var(--color-danger)',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: '700',
+            padding: '2px 6px',
+            borderRadius: '20px',
+            minWidth: '20px',
+            textAlign: 'center'
+          }}>
+            {badge}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="sidebar">
-      <div>
-        <div className="logo-section">
-          <span className="logo-icon">🌊</span>
-          <span className="logo-text gradient-text">FloatChat AI</span>
+    <aside className="sidebar">
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-icon">🌊</div>
+        <div>
+          <div className="sidebar-logo-text">FloatChat AI</div>
+          <div className="sidebar-logo-sub">Ocean Intelligence</div>
         </div>
-
-        <nav className="nav-menu">
-          {/* Section: Disaster Management Core */}
-          <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--color-primary)', letterSpacing: '1px', padding: '8px 12px 4px 12px', textTransform: 'uppercase' }}>
-            Disaster Management
-          </div>
-
-          <div 
-            className={`nav-item ${activeTab === 'disaster-alerts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('disaster-alerts')}
-          >
-            <Compass size={18} color="var(--color-primary)" />
-            <span>Alerts & Safe Nav</span>
-            <span className="nav-tag" style={{ background: 'rgba(255, 71, 114, 0.2)', color: 'var(--color-danger)' }}>LIVE</span>
-          </div>
-
-          <div 
-            className={`nav-item ${activeTab === 'emergency-sos' ? 'active' : ''}`}
-            onClick={() => setActiveTab('emergency-sos')}
-          >
-            <AlertTriangle size={18} color="var(--color-danger)" />
-            <span>Emergency SOS</span>
-            {activeSOSCount > 0 && (
-              <span className="alert-count-badge" style={{ background: 'var(--color-danger)' }}>{activeSOSCount}</span>
-            )}
-          </div>
-
-          <div 
-            className={`nav-item ${activeTab === 'shelter-resources' ? 'active' : ''}`}
-            onClick={() => setActiveTab('shelter-resources')}
-          >
-            <Building2 size={18} color="var(--color-success)" />
-            <span>Smart Shelters & AI</span>
-          </div>
-
-          <div 
-            className={`nav-item ${activeTab === 'offline-mesh' ? 'active' : ''}`}
-            onClick={() => setActiveTab('offline-mesh')}
-          >
-            <Radio size={18} color="var(--color-warning)" />
-            <span>Offline P2P Mesh</span>
-            <span className="nav-tag" style={{ background: 'rgba(245, 166, 35, 0.2)', color: 'var(--color-warning)' }}>P2P</span>
-          </div>
-
-          <div 
-            className={`nav-item ${activeTab === 'family-safety' ? 'active' : ''}`}
-            onClick={() => setActiveTab('family-safety')}
-          >
-            <Users size={18} color="var(--color-secondary)" />
-            <span>Family Safety Check</span>
-          </div>
-
-          {can('rescue-command') && (
-          <div 
-            className={`nav-item ${activeTab === 'rescue-command' ? 'active' : ''}`}
-            onClick={() => setActiveTab('rescue-command')}
-          >
-            <ShieldAlert size={18} color="#ff7fa1" />
-            <span>Live Rescue Command</span>
-          </div>
-          )}
-
-          {/* Section: Ocean Telemetry & ML */}
-          <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-muted)', letterSpacing: '1px', padding: '14px 12px 4px 12px', textTransform: 'uppercase' }}>
-            Ocean Telemetry
-          </div>
-
-          <div 
-            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
-            <LayoutDashboard size={18} />
-            <span>Buoy Telemetry</span>
-            {alertCount > 0 && (
-              <span className="alert-count-badge">{alertCount}</span>
-            )}
-          </div>
-
-          {can('ml-anomaly') && (
-          <div 
-            className={`nav-item ${activeTab === 'ml-anomaly' ? 'active' : ''}`}
-            onClick={() => setActiveTab('ml-anomaly')}
-          >
-            <Brain size={18} />
-            <span>ML Anomaly Engine</span>
-            <span className="nav-tag nav-tag-ml">ML</span>
-          </div>
-          )}
-
-          {can('sms-alerts') && (
-          <div 
-            className={`nav-item ${activeTab === 'sms-alerts' ? 'active' : ''}`}
-            onClick={() => setActiveTab('sms-alerts')}
-          >
-            <PhoneCall size={18} />
-            <span>Twilio SMS Alerts</span>
-          </div>
-          )}
-
-          {can('incidents') && (
-          <div 
-            className={`nav-item ${activeTab === 'incidents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('incidents')}
-          >
-            <Activity size={18} />
-            <span>Incident Command</span>
-          </div>
-          )}
-
-          {can('upload') && (
-          <div 
-            className={`nav-item ${activeTab === 'upload' ? 'active' : ''}`}
-            onClick={() => setActiveTab('upload')}
-          >
-            <UploadCloud size={18} />
-            <span>Upload Data</span>
-          </div>
-          )}
-
-          {can('admin-portal') && (
-          <div 
-            className={`nav-item ${activeTab === 'admin-portal' ? 'active' : ''}`}
-            onClick={() => setActiveTab('admin-portal')}
-          >
-            <Users size={18} color="var(--color-primary)" />
-            <span>Users & Phone Alerts</span>
-          </div>
-          )}
-
-          <div 
-            className={`nav-item ${activeTab === 'about' ? 'active' : ''}`}
-            onClick={() => setActiveTab('about')}
-          >
-            <Info size={18} />
-            <span>About & Docs</span>
-          </div>
-        </nav>
       </div>
 
+      {/* Navigation */}
+      <nav className="sidebar-nav">
+
+        {/* Ocean Monitoring */}
+        <div className="sidebar-section-label">Ocean Monitoring</div>
+
+        <NavItem tab="dashboard" icon={Waves} label="Buoy Telemetry" badge={alertCount} />
+        {can('ml-anomaly') && (
+          <NavItem tab="ml-anomaly" icon={Brain} label="ML Anomaly Detection"
+            badge={0}
+            iconColor="rgba(82,182,217,0.7)"
+          />
+        )}
+
+        {/* Disaster Management */}
+        <div className="sidebar-section-label">Disaster Management</div>
+
+        <NavItem tab="disaster-alerts" icon={Compass} label="Alerts & Safe Navigation" iconColor="rgba(255,255,255,0.5)" />
+        <NavItem tab="emergency-sos" icon={AlertTriangle} label="Emergency SOS" badge={activeSOSCount} badgeColor="var(--color-danger)" iconColor="rgba(181,44,58,0.7)" />
+        <NavItem tab="shelter-resources" icon={Building2} label="Smart Shelters" iconColor="rgba(29,138,106,0.7)" />
+        <NavItem tab="family-safety" icon={Users} label="Family Safety" />
+
+        {/* Operations */}
+        <div className="sidebar-section-label">Operations</div>
+
+        {can('rescue-command') && (
+          <NavItem tab="rescue-command" icon={ShieldAlert} label="Live Rescue Command" iconColor="rgba(181,44,58,0.6)" />
+        )}
+        {can('incidents') && (
+          <NavItem tab="incidents" icon={Activity} label="Incident Command" />
+        )}
+        <NavItem tab="offline-mesh" icon={Radio} label="Offline Connectivity"
+          badge={0} iconColor="rgba(201,122,24,0.7)"
+        />
+        {can('sms-alerts') && (
+          <NavItem tab="sms-alerts" icon={PhoneCall} label="SMS Alerts" />
+        )}
+        {can('upload') && (
+          <NavItem tab="upload" icon={UploadCloud} label="Upload Data" />
+        )}
+        {can('admin-portal') && (
+          <NavItem tab="admin-portal" icon={Users} label="User Management" iconColor="rgba(82,182,217,0.7)" />
+        )}
+        <NavItem tab="about" icon={Info} label="About & Docs" />
+
+      </nav>
+
+      {/* Bottom Settings Panel */}
       <div className="settings-section">
         <div className="settings-title">System Configuration</div>
-        
-        {/* DB Connection Indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-          <Database size={14} color={isMongoConnected ? 'var(--color-success)' : 'var(--color-warning)'} />
+
+        {/* DB Status Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>
+          <Server size={13} color="rgba(22,138,173,0.8)" />
           <span>
-            Storage: {isMongoConnected ? (
-              <span style={{ color: 'var(--color-success)', fontWeight: '600' }}>MongoDB</span>
-            ) : (
-              <span style={{ color: 'var(--color-warning)', fontWeight: '600' }}>Local JSON</span>
-            )}
+            Storage:&nbsp;
+            <span style={{ color: 'rgba(82,182,217,0.9)', fontWeight: '600' }}>SQLite</span>
           </span>
         </div>
 
+        {/* Current user */}
         {currentUser && (
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-            <div style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{currentUser.fullName}</div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
+            <div style={{ color: 'rgba(255,255,255,0.85)', fontWeight: '600' }}>{currentUser.fullName}</div>
             <div>{ROLE_LABELS[currentUser.role] || currentUser.role}</div>
           </div>
         )}
 
+        {/* API Key (admin only) */}
         {isAdmin && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <button 
-            className="btn-secondary" 
-            style={{ padding: '8px 12px', fontSize: '12px', justifyContent: 'center', width: '100%' }}
-            onClick={() => setShowKeyInput(!showKeyInput)}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <button
+              className="btn-secondary"
+              onClick={() => setShowKeyInput(!showKeyInput)}
+            >
+              <Key size={13} />
+              <span style={{ flex: 1, textAlign: 'left' }}>Gemini API Status</span>
+              {showKeyInput ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+            </button>
+            {showKeyInput && (
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', padding: '6px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', lineHeight: 1.5 }}>
+                API key is configured via <code style={{ background: 'rgba(0,0,0,0.3)', padding: '1px 4px', borderRadius: '3px' }}>GEMINI_API_KEY</code> in <code style={{ background: 'rgba(0,0,0,0.3)', padding: '1px 4px', borderRadius: '3px' }}>backend/.env</code>.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reset DB */}
+        {isAdmin && (
+          <button
+            className="btn-secondary"
+            onClick={onResetDb}
+            disabled={isResetting}
           >
-            <Key size={14} />
-            <span>{apiKey ? 'API Key Configured' : 'Configure Gemini Key'}</span>
+            <RefreshCw size={13} className={isResetting ? 'spinner' : ''} />
+            <span>{isResetting ? 'Resetting...' : 'Reset Default Data'}</span>
           </button>
-          
-          {showKeyInput && (
-            <input 
-              type="password"
-              className="input-field"
-              placeholder="Paste Gemini API Key..."
-              value={apiKey}
-              onChange={handleKeyChange}
-              style={{ fontSize: '11px', padding: '6px 10px', marginTop: '4px' }}
-            />
-          )}
-        </div>
         )}
 
-        {isAdmin && (
-        <button 
-          className="btn-secondary" 
-          style={{ 
-            padding: '8px 12px', 
-            fontSize: '12px', 
-            justifyContent: 'center', 
-            width: '100%',
-            borderColor: 'rgba(255, 71, 114, 0.2)',
-            color: 'rgba(255, 255, 255, 0.9)'
-          }}
-          onClick={onResetDb}
-          disabled={isResetting}
-        >
-          <RefreshCw size={14} className={isResetting ? 'spinner' : ''} />
-          <span>{isResetting ? 'Resetting...' : 'Reset Default Data'}</span>
-        </button>
-        )}
-
+        {/* Change Password */}
         <button
           className="btn-secondary"
-          style={{ padding: '8px 12px', fontSize: '12px', justifyContent: 'center', width: '100%' }}
-          onClick={() => setShowPasswordForm((open) => !open)}
+          onClick={() => setShowPasswordForm(open => !open)}
         >
-          Change password
+          <Lock size={13} />
+          <span>Change Password</span>
+          {showPasswordForm ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
         </button>
+
         {showPasswordForm && (
           <form onSubmit={handlePasswordChange} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <input className="input-field" type="password" placeholder="Current password" value={passwordForm.currentPassword} onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })} style={{ fontSize: '11px', padding: '6px 10px' }} />
-            <input className="input-field" type="password" placeholder="New password" value={passwordForm.newPassword} onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })} style={{ fontSize: '11px', padding: '6px 10px' }} />
-            <button className="btn-primary" type="submit" style={{ justifyContent: 'center', fontSize: '12px' }}>Save password</button>
-            {passwordNote && <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{passwordNote}</div>}
+            <input
+              className="input-field"
+              type="password"
+              placeholder="Current password"
+              value={passwordForm.currentPassword}
+              onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+              style={{ fontSize: '12px', padding: '7px 10px' }}
+            />
+            <input
+              className="input-field"
+              type="password"
+              placeholder="New password"
+              value={passwordForm.newPassword}
+              onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+              style={{ fontSize: '12px', padding: '7px 10px' }}
+            />
+            <button className="btn-primary" type="submit" style={{ justifyContent: 'center', fontSize: '12px', padding: '7px' }}>
+              Save Password
+            </button>
+            {passwordNote && (
+              <div style={{ fontSize: '11px', color: passwordNote.includes('success') ? 'rgba(29,138,106,0.9)' : 'rgba(181,44,58,0.9)' }}>
+                {passwordNote}
+              </div>
+            )}
           </form>
         )}
-        <button
-          className="btn-secondary"
-          style={{ padding: '8px 12px', fontSize: '12px', justifyContent: 'center', width: '100%' }}
-          onClick={onLogout}
-        >
-          <LogOut size={14} />
-          <span>Log out</span>
+
+        {/* Logout */}
+        <button className="btn-secondary" onClick={onLogout}>
+          <LogOut size={13} />
+          <span>Log Out</span>
         </button>
 
-        <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px' }}>
-          FloatChat AI Enterprise v2.0
+        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', textAlign: 'center', marginTop: '4px' }}>
+          FloatChat AI Enterprise v2.1
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

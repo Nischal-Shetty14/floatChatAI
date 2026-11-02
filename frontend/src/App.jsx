@@ -18,7 +18,7 @@ import AuthScreen from './components/AuthScreen';
 import AdminPortal from './components/AdminPortal';
 import { clearSession } from './utils/authClient';
 import { tabsForRole } from './utils/roles';
-import { MessageSquare, RefreshCw, Radio, AlertTriangle } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import './App.css';
 
 // Initial Fallback Data for Shelters & Scenarios
@@ -306,7 +306,7 @@ function App() {
   const [telemetryData, setTelemetryData] = useState([]);
   const [selectedBuoy, setSelectedBuoy] = useState('ALL');
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [apiKey, setApiKey] = useState(localStorage.getItem('floatchat_gemini_key') || '');
+  const [apiKey, setApiKey] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [isMongoConnected, setIsMongoConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -594,8 +594,26 @@ function App() {
 
   if (!authReady) {
     return (
-      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: 'var(--text-secondary)' }}>
-        Opening FloatChat...
+      <div style={{
+        minHeight: '100vh',
+        display: 'grid',
+        placeItems: 'center',
+        background: 'var(--bg-page)',
+        color: 'var(--text-secondary)',
+        fontSize: '14px',
+        gap: '12px',
+        flexDirection: 'column'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '40px', height: '40px',
+            background: 'var(--color-primary)',
+            borderRadius: '10px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '22px'
+          }}>🌊</div>
+          <span>Loading FloatChat AI…</span>
+        </div>
       </div>
     );
   }
@@ -626,17 +644,19 @@ function App() {
       {/* Main Content Area */}
       <main className="main-content" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         
-        {/* Global Disaster Crisis Sticky Top Navigation & Quick SOS Beacon */}
-        <DisasterTopBar 
-          disasterScenario={disasterScenario}
-          allScenarios={allScenarios}
-          onSwitchScenario={handleSwitchScenario}
-          isOfflineMode={isOfflineMode}
-          onToggleOfflineMode={() => setIsOfflineMode(!isOfflineMode)}
-          onOpenSOS={() => setActiveTab('emergency-sos')}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-        />
+        {/* Disaster Management Header & Quick SOS Beacon: Visible ONLY on relevant disaster-management workflows */}
+        {['disaster-alerts', 'emergency-sos', 'shelter-resources', 'family-safety', 'rescue-command', 'offline-mesh', 'incidents'].includes(activeTab) && (
+          <DisasterTopBar 
+            disasterScenario={disasterScenario}
+            allScenarios={allScenarios}
+            onSwitchScenario={handleSwitchScenario}
+            isOfflineMode={isOfflineMode}
+            onToggleOfflineMode={() => setIsOfflineMode(!isOfflineMode)}
+            onOpenSOS={() => setActiveTab('emergency-sos')}
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+          />
+        )}
 
         {/* Dynamic Disaster & Telemetry Views */}
         <div style={{ flex: 1 }}>

@@ -40,7 +40,7 @@ From the root directory, run the setup script to install all packages for both t
 npm run setup
 ```
 
-*This will run a concurrent install in both `frontend/` and `backend/` folders.*
+_This will run a concurrent install in both `frontend/` and `backend/` folders._
 
 ### Seed Sample Telemetry
 
@@ -50,7 +50,7 @@ Before running the server, generate the baseline 30-day telemetry dataset for th
 npm run generate-data
 ```
 
-*This writes sample CSV and JSON files under `backend/data/` and `frontend/public/`.*
+_This writes sample CSV and JSON files under `backend/data/` and `frontend/public/`._
 
 ### Run the App
 
@@ -61,13 +61,14 @@ npm run dev
 ```
 
 - **Frontend**: Runs at [http://localhost:3000](http://localhost:3000)
-- **Backend API**: Runs at [http://localhost:5000/api](http://localhost:5000/api)
+- **Backend API**: Runs at [http://localhost:5001/api](http://localhost:5001/api)
 
 ---
 
 ## Configuration & Environment
 
 To configure database connections and Gemini keys, edit the backend environment file:
+
 1. Open `backend/.env`
 2. Configure settings:
    - `MONGODB_URI`: Connect to a local or remote MongoDB instance (e.g. `mongodb://localhost:27017/floatchat`). If left empty, the server automatically reads and writes from `backend/data/telemetry.json`.
@@ -78,6 +79,7 @@ To configure database connections and Gemini keys, edit the backend environment 
 ## Formatting Specifications for Data Uploads
 
 When uploading custom CSV/JSON sheets, ensure they include these columns/fields:
+
 - `timestamp`: UTC date string (e.g., `2026-06-01T00:00:00Z`)
 - `buoyId`: String (e.g., `FC-PAC-01`)
 - `buoyName`: String (e.g., `Pacific Deep-Shift`)

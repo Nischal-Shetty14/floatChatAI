@@ -1,92 +1,62 @@
 ================================================================================
 FLOATCHAT AI - ADVANCED TSUNAMI, FLOOD & ANOMALY PREDICTION REPORT
 ================================================================================
-Generated At          : 2026-10-17T09:52:07.046Z
-Dataset Size          : 259 Records
-Algorithm Architecture: Ensemble (Isolation Forest + Mahalanobis + Shallow Water Wave Physics)
-Disaster Target       : Tsunami Early Warning & Coastal Storm Surge Inundation Forecasting
-Max Tsunami Threat    : 70% Risk Index
-Max Coastal Flood Risk: 93% Hazard Index
+Generated At          : 2026-11-02T22:48:01.837Z
+Dataset Size          : 211 Records
+Algorithm Architecture: Station-Aware Multivariate Z-Norm + Shallow Water Wave Theory
+Disaster Target       : Experimental Hydrodynamic Simulation & Anomaly Classification
+Max Experimental Threat: 70% Tsunami Threat Index | 8% Coastal Flood Hazard Index
 ================================================================================
 
-1. TSUNAMI & COASTAL FLOOD PREDICTION METHODOLOGY
+1. METHODOLOGY & MATHEMATICAL ARCHITECTURE
 --------------------------------------------------------------------------------
-The FloatChat AI Predictive Engine incorporates real-time hydrodynamic & 
-geophysical ocean modeling to predict Tsunami waves and Coastal Floods:
-
-A. Hydrostatic Bottom Pressure Transducer Analysis (Tsunami Triggering)
-   Detects rapid sea-floor pressure differentials (Delta P) caused by submarine 
-   tectonic fault displacements or volcanic flank collapses:
-   Delta P = rho * g * Delta h
+A. Station-Aware Multivariate Standardized Euclidean Distance (Z-Norm)
+   Measures distance from station baseline distributions without evaluation label leakage:
+   Z_{i, k} = (x_{i, k} - mu_{i, k}) / sigma_{i, k}
+   D_E(Z_i) = sqrt( sum_{k} Z_{i, k}^2 )
 
 B. Shallow Water Wave Propagation Velocity Calculator
    Tsunami waves travel at shallow water wave speeds governed by water depth (h):
-   v = sqrt( g * h )
-   Where:
-   - g = 9.81 m/s^2 (Gravitational acceleration)
-   - h = Ocean depth measured by deep-sea buoys (meters)
-   - Velocity (v) is converted to km/h to compute Coastal Estimated Time of Arrival (ETA).
-
-C. Coastal Flood & Storm Surge Barometric Extrapolation
-   Analyzes sustained ocean surface height swells and barometric pressure drops 
-   to forecast coastal inundation risks up to 24 hours in advance.
-
-
-2. MATHEMATICAL FORMULAS & PRINCIPLES
---------------------------------------------------------------------------------
-Formula 1: Shallow Water Tsunami Propagation Velocity v
    v = sqrt( g * h )  ==>  v_km/h = sqrt( 9.81 * h ) * 3.6
+   Where g = 9.81 m/s^2 and h = ocean depth.
 
-Formula 2: Hydrostatic Sea Floor Pressure Differential Delta P
-   Delta P = rho * g * Delta h
+C. Ordinary Least Squares (OLS) Time-Series Drift
+   Forecasts parameter progression using real observation timestamps (hours delta).
 
-Formula 3: Isolation Forest Anomaly Score s(x, n)
-   s(x, n) = 2^( - E(h(x)) / c(n) )
-
-Formula 4: Station-Aware Multivariate Z-Score Transformation
-   Z_i = (x_{i, k} - mu_{i, k}) / sigma_{i, k}
-
-Formula 5: Precision, Recall, F1 Score, and ROC-AUC
-   - Accuracy  = (TP + TN) / (TP + TN + FP + FN)
-   - Precision = TP / (TP + FP)
-   - Recall    = TP / (TP + FN)
-   - F1-Score  = 2 * (Precision * Recall) / (Precision + Recall)
+D. SCIENTIFIC LIMITATION NOTICE:
+   ARGO oceanographic profile measurements alone do not predict earthquakes or tsunamis.
+   All bottom pressure surge indicators are research models for decision support and 
+   must never replace official warnings from national authorities (e.g., INCOIS, PTWC).
 
 
-3. MODEL EVALUATION & ACCURACY METRICS
+2. MODEL EVALUATION & HONEST ACCURACY METRICS
 --------------------------------------------------------------------------------
-Overall Model Accuracy    : 98.84%
-Precision Score           : 75%
-Recall Score              : 100%
-F1 Score                  : 85.71%
-ROC-AUC Benchmark         : 0.994
-Total Telemetry Evaluated : 259 records
-Anomalies Detected        : 12 records
+Overall Model Accuracy    : 87.2%
+Precision Score           : 0%
+Recall Score              : 0%
+F1 Score                  : 0%
+ROC-AUC Benchmark         : 0.487
+Total Telemetry Evaluated : 211 records
+Anomalies Detected        : 5 records
 
 CONFUSION MATRIX SUMMARY:
 +--------------------------+--------------------------+
-| True Positives  (TP): 9   | False Positives (FP): 3   |
+| True Positives  (TP): 0   | False Positives (FP): 5   |
 +--------------------------+--------------------------+
-| False Negatives (FN): 0   | True Negatives  (TN): 247 |
+| False Negatives (FN): 22  | True Negatives  (TN): 184 |
 +--------------------------+--------------------------+
 
+* Evaluation Note: Predictions are strictly independent of evaluation ground truth labels.
 
-4. BASELINE OCEANOGRAPHIC FEATURE DISTRIBUTIONS
+
+3. BASELINE OCEANOGRAPHIC FEATURE DISTRIBUTIONS
 --------------------------------------------------------------------------------
-- Temperature        : Mean = 7.46 °C | StdDev = 9.32 °C
-- Dissolved Oxygen   : Mean = 5.47 mg/L | StdDev = 1.94 mg/L
-- Salinity           : Mean = 34.49 PSU | StdDev = 0.80 PSU
-- Pressure           : Mean = 1090.52 dbar | StdDev = 914.97 dbar
-- pH Level           : Mean = 8.12 | StdDev = 0.04
-- Battery Level      : Mean = 88.30 % | StdDev = 9.81 %
-
-
-5. TSUNAMI & FLOOD EARLY WARNING DISPATCH SPECIFICATIONS
---------------------------------------------------------------------------------
-- Inference Latency   : ~4.2 ms per 1,000 telemetry records
-- Memory Footprint    : < 12 MB
-- Supported Inputs    : Stream Ingestion, Local JSON Storage, CSV Upload
-- Alert Escalation    : Automated Twilio SMS Emergency Disaster Dispatcher Trigger
+- Temperature        : Mean = 10.34 °C | StdDev = 8.69 °C
+- Dissolved Oxygen   : Mean = 2.67 mg/L | StdDev = 1.24 mg/L
+- Salinity           : Mean = 34.86 PSU | StdDev = 0.31 PSU
+- Pressure           : Mean = 949.77 dbar | StdDev = 792.80 dbar
+- pH Level           : Mean = 7.81 | StdDev = 0.09
+- Battery Level      : Mean = 0.00 % | StdDev = 1.00 %
 
 ================================================================================
 Report generated automatically by FloatChat AI Predictive Engine.

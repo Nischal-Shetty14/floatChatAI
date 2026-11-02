@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { saveSession } from '../utils/authClient';
+import { Waves } from 'lucide-react';
 
 export default function AuthScreen({ onAuthenticated }) {
   const [mode, setMode] = useState('login');
@@ -39,89 +40,172 @@ export default function AuthScreen({ onAuthenticated }) {
     }
   };
 
+  const FieldLabel = ({ children }) => (
+    <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '5px', display: 'block' }}>
+      {children}
+    </span>
+  );
+
   return (
-    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px' }}>
-      <div className="glass-panel" style={{ width: 'min(520px, 100%)', padding: '28px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-        <div>
-          <div className="logo-section" style={{ marginBottom: '8px' }}>
-            <span className="logo-icon">🌊</span>
-            <span className="logo-text gradient-text">FloatChat AI</span>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'linear-gradient(160deg, #C8E8F5 0%, #EBF4FA 40%, #F0F7FB 100%)',
+      padding: '24px'
+    }}>
+      <div style={{
+        width: 'min(480px, 100%)',
+        background: '#FFFFFF',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: '0 16px 48px rgba(18,48,71,0.12)',
+        padding: '36px 32px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
+      }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+          <div style={{
+            width: '52px',
+            height: '52px',
+            background: 'var(--color-primary)',
+            borderRadius: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 14px',
+            fontSize: '26px'
+          }}>🌊</div>
+          <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
+            FloatChat AI
           </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-            Sign in to the coastal alert console. Citizens register with the mobile number that should receive SMS and WhatsApp alerts.
-          </p>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            Ocean Intelligence &amp; Emergency Management Platform
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="button" className={mode === 'login' ? 'btn-primary' : 'btn-secondary'} onClick={() => { setMode('login'); setError(''); }}>
-            Sign in
-          </button>
-          <button type="button" className={mode === 'register' ? 'btn-primary' : 'btn-secondary'} onClick={() => { setMode('register'); setError(''); }}>
-            Register as citizen
-          </button>
+        {/* Mode switcher */}
+        <div style={{
+          display: 'flex',
+          background: 'var(--bg-page)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: '4px',
+          gap: '4px'
+        }}>
+          {['login', 'register'].map(m => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => { setMode(m); setError(''); }}
+              style={{
+                flex: 1,
+                padding: '8px',
+                borderRadius: '7px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'var(--transition)',
+                background: mode === m ? '#FFFFFF' : 'transparent',
+                color: mode === m ? 'var(--color-primary)' : 'var(--text-secondary)',
+                boxShadow: mode === m ? 'var(--shadow-sm)' : 'none'
+              }}
+            >
+              {m === 'login' ? 'Sign In' : 'Register'}
+            </button>
+          ))}
         </div>
 
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {/* Form */}
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {mode === 'register' && (
             <>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Full name
-                <input className="input-field" value={registerForm.fullName} onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })} required />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Mobile number for alerts
-                <input className="input-field" placeholder="9876543210 or +919876543210" value={registerForm.phone} onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })} required />
-              </label>
+              <div>
+                <FieldLabel>Full name</FieldLabel>
+                <input
+                  className="input-field"
+                  placeholder="Your full name"
+                  value={registerForm.fullName}
+                  onChange={e => setRegisterForm({ ...registerForm, fullName: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <FieldLabel>Mobile number for alerts</FieldLabel>
+                <input
+                  className="input-field"
+                  placeholder="9876543210 or +919876543210"
+                  value={registerForm.phone}
+                  onChange={e => setRegisterForm({ ...registerForm, phone: e.target.value })}
+                  required
+                />
+              </div>
             </>
           )}
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Login id
+          <div>
+            <FieldLabel>Login ID</FieldLabel>
             <input
               className="input-field"
               autoComplete="username"
+              placeholder="Username"
               value={mode === 'login' ? loginForm.username : registerForm.username}
-              onChange={(e) => mode === 'login'
+              onChange={e => mode === 'login'
                 ? setLoginForm({ ...loginForm, username: e.target.value })
                 : setRegisterForm({ ...registerForm, username: e.target.value })}
               required
             />
-          </label>
+          </div>
 
-          <label style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-            Password
+          <div>
+            <FieldLabel>Password</FieldLabel>
             <input
               className="input-field"
               type="password"
+              placeholder="Enter your password"
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               value={mode === 'login' ? loginForm.password : registerForm.password}
-              onChange={(e) => mode === 'login'
+              onChange={e => mode === 'login'
                 ? setLoginForm({ ...loginForm, password: e.target.value })
                 : setRegisterForm({ ...registerForm, password: e.target.value })}
               required
             />
-          </label>
+          </div>
 
           {mode === 'register' && (
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              A 10-digit Indian number is stored as +91. This is the number the admin alert will text and WhatsApp. Warehouse managers are added by the admin, not from this form.
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+              A 10-digit Indian number is stored as +91. This is the number admin alerts will text. Warehouse manager accounts are created by the admin.
             </p>
           )}
 
           {error && (
-            <div style={{ color: 'var(--color-danger)', fontSize: '13px', lineHeight: 1.5 }}>{error}</div>
+            <div style={{ 
+              padding: '10px 12px', 
+              background: 'var(--color-danger-bg)', 
+              border: '1px solid var(--color-danger-border)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--color-danger)', 
+              fontSize: '13px', 
+              lineHeight: 1.5 
+            }}>
+              {error}
+            </div>
           )}
 
-          <button className="btn-primary" type="submit" disabled={busy} style={{ justifyContent: 'center' }}>
-            {busy ? 'Please wait...' : mode === 'login' ? 'Enter console' : 'Create citizen account'}
+          <button className="btn-primary" type="submit" disabled={busy} style={{ justifyContent: 'center', width: '100%', padding: '11px' }}>
+            {busy ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
-        <div style={{ borderTop: '1px solid var(--border-muted)', paddingTop: '14px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Seeded accounts</div>
-          <div>Admin — login id <strong>admin</strong> — password <strong>FloatChatAdmin@2026</strong></div>
-          <div>Warehouse manager — login id <strong>warehouse</strong> — password <strong>FloatChatWarehouse@2026</strong></div>
-          <div style={{ marginTop: '6px' }}>Only one admin exists. Change the password from the sidebar after you sign in.</div>
+        {/* Seeded accounts */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+          <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '5px', fontSize: '12px' }}>Demo accounts</div>
+          <div>Admin — <strong>admin</strong> / <strong>FloatChatAdmin@2026</strong></div>
+          <div>Warehouse — <strong>warehouse</strong> / <strong>FloatChatWarehouse@2026</strong></div>
         </div>
       </div>
     </div>

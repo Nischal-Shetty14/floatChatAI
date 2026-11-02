@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { loadTwilioConfig, saveTwilioConfig } from './secrets.js';
+import { recordAlert, listAlerts } from './db.js';
 
 dotenv.config();
 
@@ -8,10 +9,10 @@ const smsDispatchLogs = [];
 function reloadConfig() {
   const fileConfig = loadTwilioConfig();
   return {
-    accountSid: fileConfig.accountSid || '',
-    authToken: fileConfig.authToken || '',
-    fromNumber: fileConfig.smsFromNumber || '',
-    whatsappFromNumber: fileConfig.whatsappFromNumber || '',
+    accountSid: fileConfig.accountSid || process.env.TWILIO_ACCOUNT_SID || '',
+    authToken: fileConfig.authToken || process.env.TWILIO_AUTH_TOKEN || '',
+    fromNumber: fileConfig.smsFromNumber || process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_SMS_FROM || '',
+    whatsappFromNumber: fileConfig.whatsappFromNumber || process.env.TWILIO_WHATSAPP_FROM || '',
     recipientPhone: process.env.ALERT_RECIPIENT_PHONE || ''
   };
 }
@@ -72,6 +73,23 @@ export function getTwilioConfigStatus() {
 function remember(entry) {
   smsDispatchLogs.unshift(entry);
   if (smsDispatchLogs.length > 50) smsDispatchLogs.pop();
+  try {
+    recordAlert({
+      message: entry.message || '',
+      channel: entry.mode?.includes('WHATSAPP') ? 'whatsapp' : 'sms',
+      recipientPhone: entry.recipient || 'NOT_SET',
+      recipientName: entry.buoyName || 'Alert Recipient',
+      status: entry.status || 'UNKNOWN',
+      providerSid: entry.sid || null,
+      errorMessage: entry.errorMessage || null,
+      mode: entry.mode || null,
+      anomalyId: entry.anomalyId || null,
+      incidentId: entry.incidentId || null,
+      isSimulated: entry.isSimulated ? 1 : 0
+    });
+  } catch (err) {
+    console.error('Failed to persist alert log to SQLite:', err.message);
+  }
   return entry;
 }
 
@@ -100,7 +118,7 @@ async function postToTwilio({ to, from, body }) {
  * Real Twilio send. Never reports success unless Twilio accepts the message.
  * channel: 'sms' | 'whatsapp'
  */
-export async function sendLiveAlert({ to, message, channel, recipientName }) {
+export async function sendLiveAlert({ to, message, channel, recipientName, anomalyId = null, incidentId = null, isSimulated = false }) {
   const config = reloadConfig();
   const status = getTwilioConfigStatus();
   const isWhatsApp = channel === 'whatsapp';
@@ -110,8 +128,8 @@ export async function sendLiveAlert({ to, message, channel, recipientName }) {
 
   if (!status.accountReady || !from || !recipient) {
     const error = !status.accountReady
-      ? 'Twilio accountSid or authToken is missing in backend/secrets/twilio.json.'
-      : `Twilio ${isWhatsApp ? 'whatsappFromNumber' : 'smsFromNumber'} is missing in backend/secrets/twilio.json.`;
+      ? 'Twilio accountSid or authToken is missing in backend/.env (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN).'
+      : `Twilio ${isWhatsApp ? 'whatsappFromNumber' : 'smsFromNumber'} is missing in backend/.env (TWILIO_PHONE_NUMBER).`;
     const log = remember({
       id: `SMS-${Date.now()}`,
       timestamp: new Date().toISOString(),
@@ -121,7 +139,10 @@ export async function sendLiveAlert({ to, message, channel, recipientName }) {
       status: 'FAILED',
       mode: 'NOT_CONFIGURED',
       errorMessage: error,
-      buoyName: recipientName || 'Alert'
+      buoyName: recipientName || 'Alert',
+      anomalyId,
+      incidentId,
+      isSimulated
     });
     return { success: false, channel, status: 'FAILED', mode: 'NOT_CONFIGURED', sid: null, error, log };
   }
@@ -138,7 +159,10 @@ export async function sendLiveAlert({ to, message, channel, recipientName }) {
         status: result.data.status || 'queued',
         mode,
         sid: result.data.sid,
-        buoyName: recipientName || 'Alert'
+        buoyName: recipientName || 'Alert',
+        anomalyId,
+        incidentId,
+        isSimulated
       });
       return {
         success: true,
@@ -162,7 +186,10 @@ export async function sendLiveAlert({ to, message, channel, recipientName }) {
       mode: 'TWILIO_API_ERROR',
       errorMessage: error,
       sid: result.data.sid || null,
-      buoyName: recipientName || 'Alert'
+      buoyName: recipientName || 'Alert',
+      anomalyId,
+      incidentId,
+      isSimulated
     });
     return { success: false, channel, status: 'FAILED', mode: 'TWILIO_API_ERROR', sid: result.data.sid || null, error, log };
   } catch (err) {
@@ -175,7 +202,10 @@ export async function sendLiveAlert({ to, message, channel, recipientName }) {
       status: 'FAILED',
       mode: 'TWILIO_API_ERROR',
       errorMessage: err.message,
-      buoyName: recipientName || 'Alert'
+      buoyName: recipientName || 'Alert',
+      anomalyId,
+      incidentId,
+      isSimulated
     });
     return { success: false, channel, status: 'FAILED', mode: 'TWILIO_API_ERROR', sid: null, error: err.message, log };
   }
@@ -186,7 +216,7 @@ export async function sendLiveAlert({ to, message, channel, recipientName }) {
  * Falls back to a clearly labeled simulation only when Twilio is not configured,
  * so older demo buttons still respond. Admin citizen alerts do not use this path.
  */
-export async function sendSMS({ to, message, buoyName, severity, liveOnly = false, channel = 'sms' }) {
+export async function sendSMS({ to, message, buoyName, severity, liveOnly = false, channel = 'sms', anomalyId = null, incidentId = null, isSimulated = false }) {
   const config = reloadConfig();
   const recipient = to || config.recipientPhone || '';
   let formattedMessage = message;
@@ -199,7 +229,10 @@ export async function sendSMS({ to, message, buoyName, severity, liveOnly = fals
       to: recipient,
       message: formattedMessage,
       channel,
-      recipientName: buoyName
+      recipientName: buoyName,
+      anomalyId,
+      incidentId,
+      isSimulated
     });
   }
 
@@ -209,7 +242,10 @@ export async function sendSMS({ to, message, buoyName, severity, liveOnly = fals
       to: recipient,
       message: formattedMessage,
       channel: 'sms',
-      recipientName: buoyName
+      recipientName: buoyName,
+      anomalyId,
+      incidentId,
+      isSimulated
     });
   }
 
@@ -223,7 +259,10 @@ export async function sendSMS({ to, message, buoyName, severity, liveOnly = fals
     mode: 'NOT_CONFIGURED',
     sid: null,
     buoyName: buoyName || 'System',
-    errorMessage: 'Twilio is not configured. Paste credentials into backend/secrets/twilio.json.'
+    errorMessage: 'Twilio is not configured. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in backend/.env.',
+    anomalyId,
+    incidentId,
+    isSimulated
   });
 
   return {
@@ -231,7 +270,7 @@ export async function sendSMS({ to, message, buoyName, severity, liveOnly = fals
     mode: 'NOT_CONFIGURED',
     sid: null,
     log,
-    error: 'Twilio is not configured, so this message was not sent. Paste credentials into backend/secrets/twilio.json.'
+    error: 'Twilio is not configured, so this message was not sent. Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER in backend/.env.'
   };
 }
 
