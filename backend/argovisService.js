@@ -85,6 +85,17 @@ export function normalizeArgoProfile(doc) {
   const phIdx   = colMap['ph_in_situ_total'] ?? colMap['ph_in_situ_total_adjusted'] ?? colMap['ph'];
 
   const rawData = doc.data;
+  const getQualityArray = (name) => {
+    const idx = colMap[`${name}_argoqc`];
+    return idx !== undefined && Array.isArray(rawData?.[idx]) ? rawData[idx] : null;
+  };
+  const qualityArrays = {
+    pressure: getQualityArray('pressure'),
+    temperature: getQualityArray('temperature'),
+    salinity: getQualityArray('salinity'),
+    oxygen: getQualityArray('doxy'),
+    ph: getQualityArray('ph_in_situ_total')
+  };
 
   // Case 1: Metadata only (no measurements array)
   if (!Array.isArray(rawData) || rawData.length === 0) {
@@ -96,7 +107,7 @@ export function normalizeArgoProfile(doc) {
       cycleNumber,
       latitude: lat !== null ? Number(lat.toFixed(4)) : null,
       longitude: lng !== null ? Number(lng.toFixed(4)) : null,
-      depth: 0,
+      depth: null,
       timestamp,
       temperature: null,
       pressure: null,
@@ -122,6 +133,8 @@ export function normalizeArgoProfile(doc) {
         salinity: [],
         oxygen: [],
         ph: [],
+        qualityFlags: {},
+        qualityFlagsAvailable: [],
         units
       }
     };
@@ -173,6 +186,8 @@ export function normalizeArgoProfile(doc) {
     salinity: psalArr,
     oxygen: oxygenConvertedArr,
     ph: phArr,
+    qualityFlags: qualityArrays,
+    qualityFlagsAvailable: Object.keys(qualityArrays).filter(key => Array.isArray(qualityArrays[key])),
     units: {
       pressure: units['pressure'] || units['pres'] || 'decibar',
       temperature: units['temperature'] || units['temp'] || 'degree_Celsius',
@@ -203,7 +218,7 @@ export function normalizeArgoProfile(doc) {
     const rawS = psalArr[idx] !== null && psalArr[idx] !== undefined && !isNaN(psalArr[idx]) ? Number(psalArr[idx]) : null;
     const rawOx = oxygenConvertedArr[idx] !== null && oxygenConvertedArr[idx] !== undefined ? oxygenConvertedArr[idx] : null;
     const rawPhVal = phArr[idx] !== null && phArr[idx] !== undefined && !isNaN(phArr[idx]) ? Number(phArr[idx]) : null;
-    const d = depthArr[idx] !== null ? depthArr[idx] : (rawP !== null ? parseFloat((rawP * 0.993).toFixed(1)) : 5.0);
+    const d = depthArr[idx] !== null ? depthArr[idx] : (rawP !== null ? parseFloat((rawP * 0.993).toFixed(1)) : null);
 
     return {
       source: 'argovis',
@@ -220,6 +235,7 @@ export function normalizeArgoProfile(doc) {
       salinity: rawS !== null ? parseFloat(rawS.toFixed(2)) : null,
       oxygenContent: rawOx,
       ph: rawPhVal !== null ? parseFloat(rawPhVal.toFixed(2)) : null,
+      qualityFlags: Object.fromEntries(Object.entries(qualityArrays).map(([key, values]) => [key, values?.[idx] ?? null])),
       batteryLevel: null
     };
   });
@@ -586,7 +602,8 @@ export async function discoverArgoProfiles({
  */
 export async function getArgoProfileById(profileId, {
   dataVars = ['all'],
-  forceRefresh = false
+  forceRefresh = false,
+  persist = true
 } = {}) {
   if (!profileId) {
     return { success: false, error: 'profileId is required' };
@@ -688,11 +705,15 @@ export async function getArgoProfileById(profileId, {
         platformId: String(doc._id).split('_')[0],
         cycleNumber: doc.cycle_number !== undefined ? doc.cycle_number : (String(doc._id).split('_')[1] || ''),
         timestamp: doc.timestamp,
+        argovisUpdatedAt: doc.date_updated_argovis || null,
         coordinates: doc.geolocation?.coordinates || [0, 0],
         verticalProfile,
         observations,
         requestedBGC,
-        source: (Array.isArray(doc.source) && doc.source[0]?.source?.[0]) || 'argo_core'
+        source: (Array.isArray(doc.source) && doc.source[0]?.source?.[0]) || 'argo_core',
+        argovisDataSources: Array.isArray(doc.source)
+          ? doc.source.map(item => item?.source?.[0]).filter(Boolean)
+          : []
       };
 
       profileCache.set(cacheKey, {
@@ -702,8 +723,9 @@ export async function getArgoProfileById(profileId, {
 
       // Persist sampled levels into SQLite observations without overwriting baseline
       try {
-        if (observations.length > 0) {
-          saveTelemetryRecords(observations, 'argovis', false);
+        const depthResolved = observations.filter(record => record.depth !== null && record.depth !== undefined && Number.isFinite(Number(record.depth)));
+        if (persist && depthResolved.length > 0) {
+          saveTelemetryRecords(depthResolved, 'argovis', false);
         }
       } catch {
         // Non-blocking
@@ -798,7 +820,7 @@ export async function getArgoProfiles({
       buoyName: f.floatName,
       latitude: f.latestLatitude,
       longitude: f.latestLongitude,
-      depth: 0,
+      depth: null,
       timestamp: f.latestTimestamp,
       temperature: null,
       pressure: null,

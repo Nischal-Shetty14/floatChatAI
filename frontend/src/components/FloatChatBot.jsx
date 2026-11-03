@@ -1,16 +1,31 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, MessageSquare, X, Trash2, HelpCircle } from 'lucide-react';
 
-export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
-  const [messages, setMessages] = useState([
-    {
-      role: 'model',
-      content: `🌊 **Hello! I am FloatChat AI**, your emergency crisis sentinel and marine intelligence analyst. \n\nI am synchronized with active **Tsunami Buoy Telemetry**, **Verified Shelters**, **Offline P2P Mesh Gateways**, and **SAR Rescue Operations**.\n\nAsk me for nearest shelters, evacuation safe routes, offline mesh relay steps, or multilingual survival instructions!`
+const CHAT_STORAGE_KEY = 'floatchat-chat-session-v1';
+const INITIAL_MESSAGE = {
+  role: 'model',
+  content: `🌊 **Hello! I am FloatChat AI**, your emergency crisis sentinel and marine intelligence analyst. \n\nI am synchronized with active **Tsunami Buoy Telemetry**, **Verified Shelters**, **Offline P2P Mesh Gateways**, and **SAR Rescue Operations**.\n\nAsk me for nearest shelters, evacuation safe routes, offline mesh relay steps, or multilingual survival instructions!`
+};
+
+function loadChatSession() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(CHAT_STORAGE_KEY) || 'null');
+    if (Array.isArray(saved) && saved.every((message) => message && ['model', 'user'].includes(message.role) && typeof message.content === 'string')) {
+      return saved;
     }
-  ]);
+  } catch {
+    // Start a clean tab-scoped chat if stored session data is unavailable.
+  }
+  return [INITIAL_MESSAGE];
+}
+
+export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
+  const [messages, setMessages] = useState(loadChatSession);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [geminiReady, setGeminiReady] = useState(null);
+  const [geminiMode, setGeminiMode] = useState('checking');
+  const [geminiModel, setGeminiModel] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const chatEndRef = useRef(null);
 
   const SUGGESTIONS = [
@@ -27,10 +42,23 @@ export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
     fetch('/api/status')
       .then((response) => response.ok ? response.json() : null)
       .then((data) => {
-        if (data) setGeminiReady(Boolean(data.geminiConfigured));
+        if (!data) {
+          setGeminiMode('unavailable');
+          return;
+        }
+        setGeminiMode(data.geminiConfigured ? 'configured' : 'fallback');
+        setGeminiModel(data.geminiModel || '');
       })
-      .catch(() => setGeminiReady(false));
+      .catch(() => setGeminiMode('unavailable'));
   }, [isOpen]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      // The in-memory conversation remains usable if session storage is blocked.
+    }
+  }, [messages]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -68,8 +96,11 @@ export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
       const data = await response.json();
 
       if (response.ok && data.message) {
-        setMessages(prev => [...prev, { role: 'model', content: data.message }]);
+        setGeminiMode(data.geminiConfigured ? 'active' : 'fallback');
+        const detail = data.fallbackReason ? `\n\nGemini response detail: ${data.fallbackReason}` : '';
+        setMessages(prev => [...prev, { role: 'model', content: `${data.message}${detail}` }]);
       } else {
+        setGeminiMode('error');
         setMessages(prev => [...prev, { 
           role: 'model', 
           content: `⚠️ **Error communicating with server.** \n\nDetails: ${data.details || 'Unknown server error. Ensure backend is running.'}` 
@@ -77,6 +108,7 @@ export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
       }
     } catch (error) {
       console.error('Chat error:', error);
+      setGeminiMode('unavailable');
       setMessages(prev => [...prev, { 
         role: 'model', 
         content: `⚠️ **Network error.** Please verify that the FloatChat backend server is running on port 5001.` 
@@ -92,12 +124,7 @@ export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
   };
 
   const clearChat = () => {
-    setMessages([
-      {
-        role: 'model',
-        content: `🌊 Chat history cleared. Ready for new queries regarding the active ocean telemetry data.`
-      }
-    ]);
+    setMessages([{ role: 'model', content: '🌊 Chat history cleared. Ready for a new FloatChat session.' }]);
   };
 
   // Custom Light Markdown Parser to native React elements
@@ -162,15 +189,20 @@ export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
     <div className={`chatbot-drawer ${isOpen ? 'open' : ''}`}>
       {/* Header */}
       <div className="chatbot-header">
-        <div className="chatbot-title">
-          <MessageSquare size={20} color="var(--color-primary)" />
-          <span className="gradient-text">FloatChat Analyst</span>
-        </div>
-        {geminiReady === false && (
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.4 }}>
-            Rule-based mode — configure <code style={{ background: 'var(--bg-page)', padding: '1px 4px', borderRadius: '3px' }}>GEMINI_API_KEY</code> in backend/.env
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: 0 }}>
+          <div className="chatbot-title">
+            <MessageSquare size={20} color="var(--color-primary)" />
+            <span className="gradient-text">FloatChat Analyst</span>
           </div>
-        )}
+          <div className={`chat-mode-status ${geminiMode}`} role="status" aria-live="polite">
+            {geminiMode === 'checking' && 'Checking assistant status…'}
+            {geminiMode === 'configured' && `Gemini key loaded · ${geminiModel || 'model selected'} · awaiting request`}
+            {geminiMode === 'active' && `Gemini active · ${geminiModel || 'configured model'}`}
+            {geminiMode === 'fallback' && 'Rule-based, data-grounded fallback active'}
+            {geminiMode === 'unavailable' && 'Backend status unavailable'}
+            {geminiMode === 'error' && 'Chat request failed · retry when backend is available'}
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button 
             className="btn-secondary" 
@@ -212,24 +244,35 @@ export default function FloatChatBot({ isOpen, onClose, activeBuoy }) {
         <div ref={chatEndRef} />
       </div>
 
-      {/* Suggested Questions */}
-      <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <HelpCircle size={12} /> Suggestion prompts:
-        </span>
-        <div className="suggestions-grid">
-          {SUGGESTIONS.map((s, idx) => (
-            <button 
-              key={idx} 
-              className="suggestion-btn"
-              onClick={() => sendMessage(s)}
-              disabled={isLoading}
-            >
-              {s}
+      {/* Suggestions can be hidden independently of the conversation and input. */}
+      {showSuggestions ? (
+        <div className="chat-suggestions-section">
+          <div className="chat-suggestions-heading">
+            <span><HelpCircle size={12} /> Suggestion prompts:</span>
+            <button type="button" className="chat-suggestions-toggle" onClick={() => setShowSuggestions(false)} aria-label="Hide suggestions" title="Hide suggestions">
+              <X size={14} />
             </button>
-          ))}
+          </div>
+          <div className="suggestions-grid">
+            {SUGGESTIONS.map((s, idx) => (
+              <button
+                key={idx}
+                className="suggestion-btn"
+                onClick={() => sendMessage(s)}
+                disabled={isLoading}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="chat-suggestions-collapsed">
+          <button type="button" className="chat-suggestions-toggle" onClick={() => setShowSuggestions(true)}>
+            <HelpCircle size={13} /> Suggestions
+          </button>
+        </div>
+      )}
 
       {/* Input Field Form */}
       <form onSubmit={handleSubmit} className="chat-input-area">

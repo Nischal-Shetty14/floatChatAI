@@ -49,9 +49,29 @@ function MLAnomalyCenter({ telemetryData }) {
     }
   };
 
+  const getAnomalyExplanation = (tag) => {
+    switch (tag) {
+      case 'STATISTICAL_DISTRIBUTION_DRIFT':
+        return 'Significant multivariate deviation from the normal oceanographic distribution.';
+      case 'HYPOXIA_CRITICAL':
+        return 'Dissolved oxygen below the engine screening threshold (<2.8 mg/L); confirm sensor units and local criteria.';
+      case 'THERMAL_INVERSION':
+        return 'Warm measurement below 500 m flagged for review; a single threshold does not establish a temperature inversion.';
+      case 'HYDROSTATIC_PRESSURE_SURGE':
+        return 'Hydrostatic pressure or depth anomaly significantly exceeding standard profile limits.';
+      case 'SALINITY_ANOMALY':
+        return 'Abnormal salinity spike or freshwater dilution layer detected.';
+      case 'PH_OUTLIER':
+        return 'Extreme pH shift indicating localized ocean acidification or chemical anomaly.';
+      case 'BATTERY_CRITICAL':
+        return 'Sensor power reserve depleted below critical safe operation limit.';
+      default:
+        return 'Unusual oceanographic measurement pattern flagged by standardized-distance screening.';
+    }
+  };
+
   useEffect(() => {
-    runMLEvaluation(false);
-    fetchReportText();
+    runMLEvaluation(false).then(fetchReportText);
   }, []);
 
   // Handle direct download of the ML report text file
@@ -63,7 +83,8 @@ function MLAnomalyCenter({ telemetryData }) {
     setIsSendingSMS(true);
     setSmsNotification(null);
     try {
-      const msg = `CRITICAL ML ALERT: ${record.buoyName} (${record.buoyId}) flagged ${record.anomalyTypes ? record.anomalyTypes.join(', ') : 'Tsunami/Flood Threat'}. Risk: ${record.riskPercentage || record.tsunamiRiskPercentage || 85}%.`;
+      const scoreText = Number.isFinite(record.anomalyScore) ? `Standardized distance: ${record.anomalyScore.toFixed(2)} (unitless).` : 'No calibrated risk probability is available.';
+      const msg = `ML ALERT: ${record.buoyName} (${record.buoyId}) flagged ${record.anomalyTypes ? record.anomalyTypes.join(', ') : 'oceanographic anomaly'}. ${scoreText}`;
       const res = await fetch('/api/sms/send', {
         method: 'POST',
         headers: authHeaders({ 'Content-Type': 'application/json' }),
@@ -87,16 +108,7 @@ function MLAnomalyCenter({ telemetryData }) {
     }
   };
 
-  const metrics = mlData?.metrics || {
-    accuracy: 100,
-    precision: 100,
-    recall: 100,
-    f1Score: 100,
-    rocAuc: 1,
-    confusionMatrix: { truePositives: 6, falsePositives: 0, trueNegatives: 242, falseNegatives: 0 },
-    anomaliesDetectedCount: 6,
-    totalRecordsAnalyzed: 248
-  };
+  const metrics = mlData?.metrics || { totalRecordsAnalyzed: 0, confusionMatrix: null };
 
   const detectedAnomalies = mlData?.records?.filter(r => r.isAnomaly) || [];
   const futurePredictions = mlData?.futurePredictions || [];
@@ -112,10 +124,10 @@ function MLAnomalyCenter({ telemetryData }) {
           </div>
           <div>
             <h1 className="gradient-title" style={{ fontSize: '24px', margin: 0 }}>
-              Advanced ML Anomaly & Disaster Prediction Engine
+              Ocean-Condition Anomaly Screening
             </h1>
             <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '14px' }}>
-              Station-Aware Isolation Forest + Mahalanobis Distance + Tsunami Wave Speed Hydrodynamics
+              Station-based standardized Euclidean anomaly screening of available ocean measurements
             </p>
           </div>
         </div>
@@ -170,8 +182,8 @@ function MLAnomalyCenter({ telemetryData }) {
             <span className="stat-label">Benchmark Accuracy</span>
             <CheckCircle2 size={18} color="var(--color-success)" />
           </div>
-          <div className="stat-value text-success">99.65%</div>
-          <div className="stat-footer">Ground-Truth Physical Oceanographic Boundary Dataset</div>
+          <div className="stat-value text-success">Not evaluated</div>
+          <div className="stat-footer">No independent labeled benchmark dataset is available</div>
         </div>
 
         <div className="stat-card">
@@ -179,8 +191,8 @@ function MLAnomalyCenter({ telemetryData }) {
             <span className="stat-label">Precision &amp; Recall</span>
             <Zap size={18} color="var(--color-primary)" />
           </div>
-          <div className="stat-value text-primary">92.3% / 100%</div>
-          <div className="stat-footer">Harmonic F1: 96.0% · Zero False Negatives on Critical Limits</div>
+          <div className="stat-value text-primary">Not evaluated</div>
+          <div className="stat-footer">Precision, recall and F1 require ground-truth labels</div>
         </div>
 
         <div className="stat-card">
@@ -188,8 +200,8 @@ function MLAnomalyCenter({ telemetryData }) {
             <span className="stat-label">ROC-AUC Index</span>
             <Cpu size={18} color="var(--color-info)" />
           </div>
-          <div className="stat-value text-info">0.998</div>
-          <div className="stat-footer">Multivariate Isolation Tree Discriminative Score</div>
+          <div className="stat-value text-info">Not evaluated</div>
+          <div className="stat-footer">ROC-AUC requires labeled evaluation data</div>
         </div>
 
         <div className="stat-card">
@@ -262,14 +274,14 @@ function MLAnomalyCenter({ telemetryData }) {
           <div className="panel-header">
             <div>
               <h3>Detected Anomalies in Telemetry Data ({detectedAnomalies.length})</h3>
-              <p>Evaluated using Isolation Forest partition depth and Multivariate Mahalanobis statistical distance</p>
+              <p>Inference uses standardized Euclidean distance from available station measurements; it is an anomaly score, not a probability.</p>
             </div>
-            <div className="confusion-matrix-mini">
+            {metrics.confusionMatrix ? <div className="confusion-matrix-mini">
               <span>TP: {metrics.confusionMatrix.truePositives}</span>
               <span>FP: {metrics.confusionMatrix.falsePositives}</span>
               <span>FN: {metrics.confusionMatrix.falseNegatives}</span>
               <span>TN: {metrics.confusionMatrix.trueNegatives}</span>
-            </div>
+            </div> : <div className="confusion-matrix-mini">Evaluation metrics: Not evaluated</div>}
           </div>
 
           {detectedAnomalies.length === 0 ? (
@@ -291,82 +303,92 @@ function MLAnomalyCenter({ telemetryData }) {
                     <th>Temp (°C)</th>
                     <th>pH</th>
                     <th>Battery</th>
-                    <th>Risk Score</th>
+                    <th>Standardized Distance</th>
                     <th>Detected Anomaly Reason</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {detectedAnomalies.map((rec, idx) => (
-                    <tr key={idx} className={rec.severity === 'CRITICAL' ? 'row-critical' : 'row-warning'}>
-                      <td>
-                        <span className={`badge badge-${rec.severity.toLowerCase()}`}>
-                          {rec.severity}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: '700',
-                          padding: '2px 6px',
-                          borderRadius: '10px',
-                          background: (rec.source || dataSource).includes('ARGO') ? 'rgba(0,180,100,0.12)' : 'var(--bg-page)',
-                          color: (rec.source || dataSource).includes('ARGO') ? 'var(--color-success)' : 'var(--text-secondary)',
-                          border: '1px solid var(--border)'
-                        }}>
-                          {rec.source || dataSource}
-                        </span>
-                      </td>
-                      <td>
-                        <strong>{rec.buoyName}</strong>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {rec.profileId ? `Profile: ${rec.profileId}` : (rec.cycleNumber !== undefined && rec.cycleNumber !== null ? `Cycle ${rec.cycleNumber}` : rec.buoyId)}
-                        </div>
-                      </td>
-                      <td>{new Date(rec.timestamp).toLocaleString()}</td>
-                      <td>{rec.depth !== null ? `${rec.depth} m` : 'Surface'} / {rec.pressure !== null ? `${rec.pressure} dbar` : 'N/A'}</td>
-                      <td className={rec.oxygenContent !== null && rec.oxygenContent < 4.0 ? 'text-danger font-bold' : ''}>
-                        {rec.oxygenContent !== null && rec.oxygenContent !== undefined ? `${rec.oxygenContent} mg/L` : 'N/A'}
-                      </td>
-                      <td className={rec.temperature !== null && rec.temperature > 15 && rec.depth > 500 ? 'text-warning font-bold' : ''}>
-                        {rec.temperature !== null && rec.temperature !== undefined ? `${rec.temperature}°C` : 'N/A'}
-                      </td>
-                      <td>
-                        {rec.ph !== null && rec.ph !== undefined ? rec.ph : 'N/A'}
-                      </td>
-                      <td className={rec.batteryLevel !== null && rec.batteryLevel < 25 ? 'text-danger font-bold' : ''}>
-                        {rec.batteryLevel !== null && rec.batteryLevel !== undefined ? `${rec.batteryLevel}%` : <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>N/A (Argo)</span>}
-                      </td>
-                      <td>
-                        <div className="risk-bar-container">
-                          <div className="risk-bar-fill" style={{ width: `${rec.riskPercentage || Math.round((rec.ensembleAnomalyScore || 0.8) * 100)}%`, background: (rec.riskPercentage || 80) > 75 ? 'var(--color-danger)' : 'var(--color-warning)' }}></div>
-                          <span className="risk-text">{rec.riskPercentage || Math.round((rec.ensembleAnomalyScore || 0.8) * 100)}%</span>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="tags-container">
-                          {rec.anomalyTypes && rec.anomalyTypes.length > 0 ? (
-                            rec.anomalyTypes.map((tag, tIdx) => (
-                              <span key={tIdx} className="tag-pill">{tag}</span>
-                            ))
-                          ) : (
-                            <span className="tag-pill">{rec.explanation || 'STATISTICAL_DISTRIBUTION_DRIFT'}</span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        <button 
-                          className="btn-xs btn-sms" 
-                          onClick={() => handleQuickSMSAlert(rec)}
-                          disabled={isSendingSMS}
-                          title="Dispatch Twilio SMS Alert"
-                        >
-                          <Send size={12} />
-                          <span>SMS Alert</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {detectedAnomalies.map((rec, idx) => {
+                    const anomalyScore = Number.isFinite(rec.anomalyScore) ? rec.anomalyScore : rec.ensembleAnomalyScore;
+
+                    return (
+                      <tr key={idx} className={rec.severity === 'CRITICAL' ? 'row-critical' : 'row-warning'}>
+                        <td>
+                          <span className={`badge badge-${rec.severity.toLowerCase()}`}>
+                            {rec.severity}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            background: (rec.source || dataSource).includes('ARGO') ? 'rgba(0,180,100,0.12)' : 'var(--bg-page)',
+                            color: (rec.source || dataSource).includes('ARGO') ? 'var(--color-success)' : 'var(--text-secondary)',
+                            border: '1px solid var(--border)'
+                          }}>
+                            {rec.source || dataSource}
+                          </span>
+                        </td>
+                        <td>
+                          <strong>{rec.buoyName}</strong>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {rec.profileId ? `Profile: ${rec.profileId}` : (rec.cycleNumber !== undefined && rec.cycleNumber !== null ? `Cycle ${rec.cycleNumber}` : rec.buoyId)}
+                          </div>
+                        </td>
+                        <td>{new Date(rec.timestamp).toLocaleString()}</td>
+                        <td>{rec.depth !== null ? `${rec.depth} m` : 'Surface'} / {rec.pressure !== null ? `${rec.pressure} dbar` : 'N/A'}</td>
+                        <td className={rec.oxygenContent !== null && rec.oxygenContent < 4.0 ? 'text-danger font-bold' : ''}>
+                          {rec.oxygenContent !== null && rec.oxygenContent !== undefined ? `${rec.oxygenContent} mg/L` : 'N/A'}
+                        </td>
+                        <td className={rec.temperature !== null && rec.temperature > 15 && rec.depth > 500 ? 'text-warning font-bold' : ''}>
+                          {rec.temperature !== null && rec.temperature !== undefined ? `${rec.temperature}°C` : 'N/A'}
+                        </td>
+                        <td>
+                          {rec.ph !== null && rec.ph !== undefined ? rec.ph : 'N/A'}
+                        </td>
+                        <td className={rec.batteryLevel !== null && rec.batteryLevel < 25 ? 'text-danger font-bold' : ''}>
+                          {rec.batteryLevel !== null && rec.batteryLevel !== undefined ? `${rec.batteryLevel}%` : <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>N/A (Argo)</span>}
+                        </td>
+                        <td>
+                          <span className="risk-text" title="Unitless standardized Euclidean distance from the station baseline; not a probability">
+                            {Number.isFinite(anomalyScore) ? anomalyScore.toFixed(2) : 'Score unavailable'}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="tags-container" style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {rec.anomalyTypes && rec.anomalyTypes.length > 0 ? (
+                                rec.anomalyTypes.map((tag, tIdx) => (
+                                  <span key={tIdx} className="tag-pill">{tag}</span>
+                                ))
+                              ) : (
+                                <span className="tag-pill">{rec.explanation || 'STATISTICAL_DISTRIBUTION_DRIFT'}</span>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
+                              {rec.anomalyTypes && rec.anomalyTypes.length > 0
+                                ? getAnomalyExplanation(rec.anomalyTypes[0])
+                                : (rec.explanation || getAnomalyExplanation('STATISTICAL_DISTRIBUTION_DRIFT'))}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            className="btn-xs btn-sms"
+                            onClick={() => handleQuickSMSAlert(rec)}
+                            disabled={isSendingSMS}
+                            title="Dispatch Twilio SMS Alert"
+                          >
+                            <Send size={12} />
+                            <span>SMS Alert</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -381,9 +403,9 @@ function MLAnomalyCenter({ telemetryData }) {
             <div>
               <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Radio size={20} color="var(--color-danger)" />
-                Tsunami & Coastal Flood Disaster Early Warning System
+                Tsunami & Coastal Flood Data Availability
               </h3>
-              <p>Hydrostatic Bottom Pressure Transducers & Shallow Water Wave Velocity Forecasting (v = √(g·h))</p>
+              <p>ARGO profiles do not provide bottom-pressure time series, atmospheric pressure, or coastal water levels needed to calculate these risks.</p>
             </div>
           </div>
 
@@ -405,24 +427,24 @@ function MLAnomalyCenter({ telemetryData }) {
                   {/* Tsunami Risk Gauge */}
                   <div className="disaster-gauge-box">
                     <div className="gauge-circle" style={{ borderColor: d.tsunamiRiskPercentage > 60 ? '#ef4444' : '#34d399' }}>
-                      <span className="gauge-num">{d.tsunamiRiskPercentage}%</span>
-                      <span className="gauge-lbl">TSUNAMI RISK</span>
+                      <span className="gauge-num">N/A</span>
+                      <span className="gauge-lbl">NOT ASSESSABLE</span>
                     </div>
                     <div className="gauge-meta">
-                      <span>Wave Velocity: <strong>{d.waveVelocityKph} km/h</strong></span>
-                      <span>Coastal ETA: <strong className={d.coastalEtaMinutes < 60 ? 'text-danger' : ''}>{d.coastalEtaMinutes} mins</strong></span>
+                      <span>Wave Velocity: <strong>N/A</strong></span>
+                      <span>Coastal ETA: <strong>N/A</strong></span>
                     </div>
                   </div>
 
                   {/* Coastal Flood Risk Gauge */}
                   <div className="disaster-gauge-box">
                     <div className="gauge-circle" style={{ borderColor: d.floodRiskPercentage > 60 ? '#f59e0b' : '#60a5fa' }}>
-                      <span className="gauge-num">{d.floodRiskPercentage}%</span>
-                      <span className="gauge-lbl">FLOOD HAZARD</span>
+                      <span className="gauge-num">N/A</span>
+                      <span className="gauge-lbl">NOT ASSESSABLE</span>
                     </div>
                     <div className="gauge-meta">
-                      <span>Threat Level: <strong>{d.floodThreatLevel}</strong></span>
-                      <span>Hydro Delta: <strong>+{d.pressureZScore} σ</strong></span>
+                      <span>Assessment: <strong>{d.floodThreatLevel}</strong></span>
+                      <span>Pressure deviation: <strong>{Number.isFinite(d.pressureZScore) ? `${d.pressureZScore} σ` : 'N/A'}</strong></span>
                     </div>
                   </div>
                 </div>
@@ -439,13 +461,8 @@ function MLAnomalyCenter({ telemetryData }) {
                 <button 
                   className={`btn-primary ${d.tsunamiRiskPercentage > 60 ? 'btn-danger-active' : ''}`}
                   style={{ width: '100%', marginTop: '12px', fontSize: '13px' }}
-                  onClick={() => handleQuickSMSAlert({
-                    buoyName: d.buoyName,
-                    buoyId: d.buoyId,
-                    riskPercentage: Math.max(d.tsunamiRiskPercentage, d.floodRiskPercentage),
-                    anomalyTypes: [d.tsunamiThreatLevel, d.floodThreatLevel],
-                    severity: 'CRITICAL'
-                  })}
+                  disabled
+                  title="ARGO data cannot provide a valid tsunami or flood risk estimate."
                 >
                   <Send size={14} />
                   <span>Dispatch Twilio Emergency Tsunami/Flood SMS</span>
@@ -462,7 +479,7 @@ function MLAnomalyCenter({ telemetryData }) {
           <div className="panel-header">
             <div>
               <h3>Imminent Anomaly Predictions (Next 12h to 24h Horizon)</h3>
-              <p>Multivariate time-series linear trend extrapolation forecasting upcoming sensor drift & threshold breaches</p>
+              <p>Experimental short-term sensor trend extrapolation from distinct observation times. It is not a weather forecast.</p>
             </div>
           </div>
 
@@ -486,25 +503,25 @@ function MLAnomalyCenter({ telemetryData }) {
                   </div>
 
                   <div className="forecast-risk-gauge">
-                    <div className="risk-circle" style={{ borderColor: pred.forecastRiskPercentage > 75 ? 'var(--color-danger)' : 'var(--color-warning)' }}>
-                      <span className="risk-num">{pred.forecastRiskPercentage}%</span>
-                      <span className="risk-lbl">Predicted Risk</span>
+                    <div className="risk-circle" style={{ borderColor: 'var(--color-warning)' }}>
+                      <span className="risk-num">N/A</span>
+                      <span className="risk-lbl">Risk probability unavailable</span>
                     </div>
                     <div className="forecast-metrics-list">
                       <div>
                         <span>Forecast O2:</span>
                         <strong className={pred.predictedOxygenContent < 4.0 ? 'text-danger' : ''}>
-                          {pred.predictedOxygenContent} mg/L
+                          {pred.predictedOxygenContent !== null ? `${pred.predictedOxygenContent} mg/L` : 'N/A'}
                         </strong>
                       </div>
                       <div>
                         <span>Forecast Temp:</span>
-                        <strong>{pred.predictedTemperature}°C</strong>
+                        <strong>{pred.predictedTemperature !== null ? `${pred.predictedTemperature}°C` : 'N/A'}</strong>
                       </div>
                       <div>
                         <span>Forecast Battery:</span>
                         <strong className={pred.predictedBatteryLevel < 20 ? 'text-danger' : ''}>
-                          {pred.predictedBatteryLevel}%
+                          {pred.predictedBatteryLevel !== null ? `${pred.predictedBatteryLevel}%` : 'N/A'}
                         </strong>
                       </div>
                       <div>
@@ -563,7 +580,7 @@ function MLAnomalyCenter({ telemetryData }) {
                 {"v = sqrt( g * h )   ==>   v_km/h = sqrt( 9.81 * h ) * 3.6"}
               </div>
               <p className="formula-desc">
-                Calculates Tsunami propagation speed v where g is gravity (9.81 m/s²) and h is ocean depth. Deep abyssal depths (2,500m) yield wave speeds exceeding 560 km/h.
+                The physics formula is valid when seafloor depth is known, but the app's ARGO profile depth is a sampled water-column level, not bathymetry. This engine does not calculate tsunami speed or coastal ETA.
               </p>
             </div>
 
@@ -573,27 +590,27 @@ function MLAnomalyCenter({ telemetryData }) {
                 {"ΔP = ρ * g * Δh"}
               </div>
               <p className="formula-desc">
-                Measures sea-floor pressure change ΔP from ocean water density ρ, gravitational constant g, and vertical water displacement Δh caused by submarine fault ruptures.
+                This relation requires seafloor bottom-pressure time series. ARGO profile pressure is measured at changing depths and cannot be used here as a tsunami trigger.
               </p>
             </div>
 
             <div className="formula-box">
-              <div className="formula-title">3. Isolation Forest Anomaly Scoring Function</div>
+              <div className="formula-title">3. Standardized Euclidean Anomaly Distance</div>
               <div className="formula-equation">
-                {"s(x, n) = 2^(-E(h(x)) / c(n))"}
+                {"D = sqrt( sum_k z_k^2 )"}
               </div>
               <p className="formula-desc">
-                Measures path length h(x) required to isolate observation x. As path length decreases, anomaly score s approaches 1.0.
+                Describes the combined, unitless standardized deviation of available measurements from this station's dataset baseline. It is not a probability; baselines do not adjust for expected depth-dependent profiles.
               </p>
             </div>
 
             <div className="formula-box">
-              <div className="formula-title">4. Multivariate Mahalanobis Distance Vectorization</div>
+              <div className="formula-title">4. Standardized Euclidean Distance (Not Mahalanobis)</div>
               <div className="formula-equation">
-                {"D_M(x) = sqrt( (x - μ)^T * Σ^(-1) * (x - μ) )"}
+                {"D_E(x) = sqrt( sum_k ((x_k - μ_k) / σ_k)^2 )"}
               </div>
               <p className="formula-desc">
-                Calculates scale-invariant statistical distance of vector x [Temp, Salinity, O2, Pressure, pH, Battery] from baseline mean μ using covariance matrix Σ.
+                Uses individual feature standard deviations, not a covariance matrix. Missing variables are excluded from the distance calculation.
               </p>
             </div>
           </div>

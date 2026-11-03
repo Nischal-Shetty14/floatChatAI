@@ -104,6 +104,7 @@ export default function BuoyMap({ buoys, selectedBuoy, onSelectBuoy, telemetryDa
               <g
                 key={b.id}
                 className="buoy-node"
+                style={{ cursor: 'pointer' }}
                 onClick={() => onSelectBuoy(b.id)}
                 onMouseEnter={() => setHoveredBuoy({
                   ...b,
@@ -115,7 +116,16 @@ export default function BuoyMap({ buoys, selectedBuoy, onSelectBuoy, telemetryDa
                 })}
                 onMouseLeave={() => setHoveredBuoy(null)}
               >
-                {/* Glowing Outer Beacon Ring */}
+                {/* Stable Static Hit Target to prevent flickering/shaking from animated radius */}
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={isSelected ? 14 : 10}
+                  fill="transparent"
+                  pointerEvents="all"
+                />
+
+                {/* Glowing Outer Beacon Ring (pointerEvents disabled so expanding radius doesn't jitter) */}
                 <circle
                   cx={x}
                   cy={y}
@@ -124,6 +134,7 @@ export default function BuoyMap({ buoys, selectedBuoy, onSelectBuoy, telemetryDa
                   stroke={isSelected ? '#0077b6' : pulseColor}
                   strokeWidth={isSelected ? '2' : '1.2'}
                   opacity={isSelected ? 0.95 : 0.6}
+                  pointerEvents="none"
                   style={{ transformOrigin: `${x}px ${y}px` }}
                 >
                   <animate attributeName="r" values="3;11;3" dur="2.4s" repeatCount="indefinite" />
@@ -138,6 +149,7 @@ export default function BuoyMap({ buoys, selectedBuoy, onSelectBuoy, telemetryDa
                   fill={b.isArgo ? '#0096c7' : pulseColor}
                   stroke="#ffffff"
                   strokeWidth="0.9"
+                  pointerEvents="none"
                 />
 
                 {/* Marker Label on selection or hover */}
@@ -149,6 +161,7 @@ export default function BuoyMap({ buoys, selectedBuoy, onSelectBuoy, telemetryDa
                     fontSize="7"
                     fontWeight="700"
                     textAnchor="middle"
+                    pointerEvents="none"
                   >
                     {b.floatId || b.id}
                   </text>
@@ -158,11 +171,12 @@ export default function BuoyMap({ buoys, selectedBuoy, onSelectBuoy, telemetryDa
           })}
         </svg>
 
-        {/* Hover Tooltip display */}
+        {/* Hover Tooltip display — pointerEvents none prevents tooltip from interrupting hover */}
         {hoveredBuoy && (
           <div
             className="buoy-tooltip"
             style={{
+              pointerEvents: 'none',
               left: `${Math.min(Math.max(10, hoveredBuoy.x - 40), 220)}px`,
               top: `${Math.min(hoveredBuoy.y + 12, 120)}px`,
               background: '#FFFFFF',

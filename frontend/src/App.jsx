@@ -8,7 +8,7 @@ import OfflineMeshNetwork from './components/OfflineMeshNetwork';
 import FamilySafetyCenter from './components/FamilySafetyCenter';
 import LiveRescueDashboard from './components/LiveRescueDashboard';
 import Dashboard from './components/Dashboard';
-import MLAnomalyCenter from './components/MLAnomalyCenter';
+import MLAnomalyCenter from './components/MLAnomalyCenterFixed';
 import SMSAlertCenter from './components/SMSAlertCenter';
 import IncidentCommand from './components/IncidentCommand';
 import DataUploader from './components/DataUploader';
