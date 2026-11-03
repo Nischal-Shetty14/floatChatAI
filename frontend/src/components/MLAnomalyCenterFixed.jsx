@@ -167,7 +167,7 @@ function MLAnomalyCenter({ telemetryData }) {
   const currentBand = selectedHistory?.bands?.find(band => String(band.depthBand.minMeters) === selectedDepthBand);
 
   return (
-    <div className="tab-container">
+    <div className="tab-container ml-anomaly-center">
       {/* Header Banner */}
       <div className="section-header glow-box">
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>

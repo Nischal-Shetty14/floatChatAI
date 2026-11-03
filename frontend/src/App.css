@@ -888,8 +888,18 @@
 /* ═══════════════════════════════════════════════════
    TABLES (telemetry, SMS logs)
 ════════════════════════════════════════════════════ */
-.telemetry-table {
+.table-responsive {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.telemetry-table {
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -908,6 +918,19 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--border-muted);
   color: var(--text-primary);
+  min-width: 76px;
+  max-width: 340px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.telemetry-table th {
+  min-width: 76px;
+  max-width: 340px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 
 .telemetry-table tbody tr:hover { background: var(--bg-card-hover); }
@@ -1229,6 +1252,211 @@
 }
 
 .forecast-reasons ul { padding-left: 16px; margin: 4px 0 0 0; }
+
+/* ML anomaly center: constrain nested layouts at the page/card boundary. */
+.ml-anomaly-center,
+.ml-anomaly-center > *,
+.ml-anomaly-center .panel-card,
+.ml-anomaly-center .panel-header,
+.ml-anomaly-center .panel-header > *,
+.ml-anomaly-center .forecast-card,
+.ml-anomaly-center .forecast-card > *,
+.ml-anomaly-center .forecast-card-header > *,
+.ml-anomaly-center .forecast-reasons,
+.ml-anomaly-center .empty-state,
+.ml-anomaly-center .code-viewer {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ml-anomaly-center,
+.ml-anomaly-center * {
+  box-sizing: border-box;
+}
+
+.ml-anomaly-center .section-header,
+.ml-anomaly-center .panel-header {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ml-anomaly-center .section-header > *,
+.ml-anomaly-center .panel-header > * {
+  min-width: 0;
+}
+
+.ml-anomaly-center .section-header > div:first-child {
+  flex: 1 1 280px;
+}
+
+.ml-anomaly-center .section-header > div:first-child > div,
+.ml-anomaly-center .section-header h1,
+.ml-anomaly-center .section-header p {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.ml-anomaly-center .subtabs-bar {
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+}
+
+.ml-anomaly-center .predictions-cards-grid,
+.ml-anomaly-center .math-formulas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  min-width: 0;
+  max-width: 100%;
+  gap: 14px;
+}
+
+.ml-anomaly-center .forecast-card,
+.ml-anomaly-center .formula-box {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ml-anomaly-center .forecast-card-header {
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ml-anomaly-center .forecast-card-header h4,
+.ml-anomaly-center .forecast-card-header span,
+.ml-anomaly-center .forecast-card p,
+.ml-anomaly-center .forecast-reasons,
+.ml-anomaly-center .stat-footer,
+.ml-anomaly-center .formula-title,
+.ml-anomaly-center .formula-desc {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.ml-anomaly-center .disaster-gauges-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+}
+
+.ml-anomaly-center .disaster-gauge-box {
+  min-width: 0;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.ml-anomaly-center .gauge-meta,
+.ml-anomaly-center .gauge-meta > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.ml-anomaly-center .forecast-metrics-list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+}
+
+.ml-anomaly-center .forecast-metrics-list > div > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.ml-anomaly-center .forecast-metrics-list strong {
+  white-space: normal;
+}
+
+.ml-anomaly-center .table-responsive {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ml-anomaly-center .telemetry-table {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.ml-anomaly-center .telemetry-table th,
+.ml-anomaly-center .telemetry-table td {
+  min-width: 76px;
+  max-width: 340px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.ml-anomaly-center .telemetry-table th:nth-child(1),
+.ml-anomaly-center .telemetry-table td:nth-child(1) { min-width: 110px; }
+.ml-anomaly-center .telemetry-table th:nth-child(2),
+.ml-anomaly-center .telemetry-table td:nth-child(2) { min-width: 125px; }
+.ml-anomaly-center .telemetry-table th:nth-child(3),
+.ml-anomaly-center .telemetry-table td:nth-child(3) { min-width: 145px; }
+.ml-anomaly-center .telemetry-table th:nth-child(4),
+.ml-anomaly-center .telemetry-table td:nth-child(4) { min-width: 145px; }
+.ml-anomaly-center .telemetry-table th:nth-child(12),
+.ml-anomaly-center .telemetry-table td:nth-child(12) { min-width: 260px; }
+.ml-anomaly-center .telemetry-table th:last-child,
+.ml-anomaly-center .telemetry-table td:last-child { min-width: 120px; }
+
+.ml-anomaly-center .telemetry-table .btn-xs,
+.ml-anomaly-center .telemetry-table .btn-sms {
+  max-width: 100%;
+  white-space: normal;
+  justify-content: center;
+}
+
+.ml-anomaly-center .risk-text {
+  margin-left: 0;
+}
+
+.ml-anomaly-center .formula-equation {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.ml-anomaly-center .code-viewer pre {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.ml-anomaly-center .recharts-responsive-container {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  .ml-anomaly-center .disaster-gauges-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .ml-anomaly-center .section-header,
+  .ml-anomaly-center .panel-card {
+    padding: 14px;
+  }
+
+  .ml-anomaly-center .predictions-cards-grid,
+  .ml-anomaly-center .math-formulas-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ml-anomaly-center .forecast-risk-gauge {
+    flex-wrap: wrap;
+  }
+}
 
 /* confusion matrix */
 .confusion-matrix-mini {

@@ -406,6 +406,7 @@ input, select, textarea, button { font-family: inherit; }
   overflow-y: auto;
   background: var(--bg-page);
   min-height: 100vh;
+  min-width: 0;
 }
 
 /* ─── Alert banners ──────────────────────────────────── */
